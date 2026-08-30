@@ -37,15 +37,28 @@ def mode_a_scrcpy_ocr() -> str:
     return ""
 
 
+def _ocr_bytes(data: bytes) -> str:
+    try:
+        import pytesseract  # type: ignore
+        from PIL import Image  # type: ignore
+        import io
+        return pytesseract.image_to_string(Image.open(io.BytesIO(data)))
+    except Exception as e:  # noqa
+        return f"[ocr-unavailable:{e}]"
+
+
 def mode_b_adb_ocr(android) -> str:
-    """ADB exec-out screencap -> PNG -> OCR."""
-    out = os.path.join(tempfile.gettempdir(), "adb_cap.png")
-    r = subprocess.run(["adb", "exec-out", "screencap", "-p"],
-                       stdout=open(out, "wb"), timeout=30)
-    log("perception", {"mode": "B", "rc": r.returncode})
-    if os.path.exists(out) and os.path.getsize(out) > 0:
-        return _ocr(out)
-    return ""
+    """ADB exec-out screencap -> PNG bytes -> OCR. Works for laptop->phone and
+    phone self-control (routes through the same ADB handle as taps/launches)."""
+    try:
+        r = android._adb("exec-out", "screencap", "-p")
+        data = getattr(r, "stdout", b"") or b""
+        if len(data) < 100:
+            return ""
+        return _ocr_bytes(data)
+    except Exception as e:  # noqa
+        log("perception", {"mode": "B", "err": str(e)})
+        return ""
 
 
 def mode_c_uiautomator(android) -> list[dict]:
