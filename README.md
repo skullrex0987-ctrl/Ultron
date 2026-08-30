@@ -13,6 +13,14 @@ on your LAN into a full mesh:
 Both brains are **offline**. Cloud (OpenRouter / TokenRouter / xKiro / OpenCode /
 OpenAI) is an optional opt-in fallback toggle, never required.
 
+## Status (verified)
+- ✅ Agent loop (perceive→act→verify), app launch via `am start` (HyperOS-safe),
+  gesture/audio-reactive premium orbs (laptop + phone-web + APK).
+- ✅ Mesh link proven: phone pairs + relays goals to laptop (28 automated tests).
+- ✅ Both apps boot as real processes (laptop WS 8766/8765, phone WS 8081).
+- ✅ Full model choice: any local Ollama model, or any cloud/custom endpoint.
+- ⏳ Verified on your hardware only (webcam gestures, Vosk mic, Poco ADB, APK compile).
+
 ## Architecture
 ```
  LAPTOP (qwen3.5:4b)  <--LAN mesh (pair A/B/C)-->  PHONE (qwen3.5:0.8b)
