@@ -1,6 +1,10 @@
 """Autonomous agent loop with per-task step prompt (Q17/21 C: full auto,
 NO cap, but MUST ask the user for step count before every task) and a
 global kill-switch + hard ceiling.
+
+The loop is a real perceive -> decide -> act -> verify cycle so the agent
+actually accomplishes goals on the linked phone / local machine, not just
+emits one tool call.
 """
 from __future__ import annotations
 import os
@@ -24,15 +28,16 @@ def _check_kill() -> None:
 
 
 class Agent:
-    def __init__(self, model_side: str = "main"):
+    def __init__(self, model_side: str = "main",
+                 on_reply: Optional[Callable[[str], None]] = None):
         self.llm = BrainClient(model=CFG.model_for(model_side))
         self.android = AndroidControl()
         self.max_steps = CFG.max_step_hard_cap
-        self._prompt_fn = None  # set via set_prompt for interactive step count
+        self._prompt_fn = None
+        self.on_reply = on_reply  # callback(text) -> e.g. trigger TTS on HUD
 
     def ask_steps(self, goal: str) -> int:
-        """Q21: always prompt the user for number of steps before a task.
-        If no prompt fn injected (headless), default to the hard cap but LOG the ask."""
+        """Q21: always prompt the user for number of steps before a task."""
         n = CFG.max_step_hard_cap
         if self._prompt_fn:
             try:
@@ -41,13 +46,26 @@ class Agent:
             except (ValueError, TypeError):
                 n = CFG.max_step_hard_cap
         else:
-            n = CFG.max_step_hard_cap
+            log("agent", {"event": "step-prompt-default", "goal": goal,
+                          "steps": n})
         n = min(max(1, n), CFG.max_step_hard_cap)
         log("agent", {"event": "step-prompt", "goal": goal, "steps": n})
         return n
 
     def set_prompt(self, fn: Callable[[str], str]) -> None:
         self._prompt_fn = fn
+
+    def _decide(self, goal: str, step: int, steps: int, scene: dict) -> dict:
+        ctx = (
+            f"Goal: {goal}\n"
+            f"Step {step+1}/{steps}\n"
+            f"Current screen/context: {scene}\n"
+            "Decide the SINGLE next tool call to make progress. "
+            "If the goal is fully achieved, respond with tool 'reply' summarizing. "
+            "If you need the phone unlocked first and it's locked, use adb 'keyevent 82' then 'swipe'. "
+            "Prefer adb 'find \"<text>\"' to tap visible UI by name."
+        )
+        return self.llm.chat(ctx)
 
     def run(self, goal: str, perception_mode: str = "C") -> dict:
         _check_kill()
@@ -59,27 +77,33 @@ class Agent:
         results = []
         for i in range(steps):
             _check_kill()
-            # perceive
             scene = perceive(self.android, perception_mode)
-            ctx = f"Goal: {goal}\nStep {i+1}/{steps}\nScene: {scene}\nWhat is the next tool call?"
             try:
-                call = self.llm.chat(ctx)
+                call = self._decide(goal, i, steps, scene)
             except Exception as e:  # noqa
                 log("agent", {"event": "llm-error", "err": str(e)})
                 results.append({"step": i, "error": str(e)})
                 break
-            if call.get("tool") == "reply":
-                transcript(call["args"].get("text", ""), who="ultron")
-                results.append({"step": i, "reply": call["args"].get("text")})
+
+            tool = call.get("tool")
+            if tool == "reply":
+                text = call.get("args", {}).get("text", "")
+                transcript(text, who="ultron")
+                if self.on_reply:
+                    self.on_reply(text)
+                results.append({"step": i, "reply": text})
                 break
-            # route through tools; 'adb' tool delegates to android control
-            if call.get("tool") == "adb":
-                res = getattr(self.android, "tap" if "tap" in str(call) else "_adb")(
-                    *[]) if False else self.android._adb(*call["args"].get("cmd", "").split())
-                results.append({"step": i, "tool": "adb", "res": res.returncode})
-            else:
-                res = dispatch(call)
-                results.append({"step": i, "tool": call.get("tool"), "res": res})
-            log("agent", {"event": "step-done", "step": i, "tool": call.get("tool")})
+
+            # route through tools; adb needs the android handle
+            res = dispatch(call, android=self.android)
+            ok = res.get("ok", False)
+            log("agent", {"event": "step-done", "step": i, "tool": tool,
+                          "ok": ok, "res": res})
+            results.append({"step": i, "tool": tool, "res": res})
+
+            # short-circuit on hard failure for adb 'find'
+            if tool == "adb" and not ok and "not-found" in str(res.get("reason", "")):
+                transcript(f"Could not find UI element: {res.get('reason')}", who="ultron")
+
         transcript("Task complete.", who="ultron")
         return {"goal": goal, "steps_run": len(results), "results": results}

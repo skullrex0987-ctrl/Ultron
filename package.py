@@ -9,7 +9,7 @@ Run:  python3 package.py
 """
 import os, shutil, zipfile, sys
 
-ROOT = "/root/ultron-ultron"
+ROOT = "/root/jarvis-ultron"
 OUT = "/root/outbox"
 os.makedirs(OUT, exist_ok=True)
 
