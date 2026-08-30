@@ -13,6 +13,7 @@ import unittest
 ROOT = "/root/jarvis-ultron/laptop/core"
 import sys
 sys.path.insert(0, ROOT)
+sys.path.insert(0, "/root/jarvis-ultron/phone/agent")
 
 
 class TestMeshBridge(unittest.TestCase):
