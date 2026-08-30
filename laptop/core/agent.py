@@ -97,13 +97,20 @@ class Agent:
             # route through tools; adb needs the android handle
             res = dispatch(call, android=self.android)
             ok = res.get("ok", False)
-            log("agent", {"event": "step-done", "step": i, "tool": tool,
+            log("agent", {"event": "step-done", "tool": tool,
                           "ok": ok, "res": res})
             results.append({"step": i, "tool": tool, "res": res})
 
-            # short-circuit on hard failure for adb 'find'
-            if tool == "adb" and not ok and "not-found" in str(res.get("reason", "")):
-                transcript(f"Could not find UI element: {res.get('reason')}", who="ultron")
+            # verify: after a UI action, confirm the expected element is present
+            if tool == "adb":
+                cmd = str(call.get("args", {}).get("cmd", ""))
+                if "find" in cmd and ok:
+                    target = cmd.split('"')[1] if '"' in cmd else ""
+                    if target and not self.android.reached(target):
+                        log("agent", {"event": "verify-failed", "target": target})
+                        transcript(f"Tapped '{target}' but it's not confirmed on screen.", who="ultron")
+                if "not-found" in str(res.get("reason", "")):
+                    transcript(f"Could not find UI element: {res.get('reason')}", who="ultron")
 
         transcript("Task complete.", who="ultron")
         return {"goal": goal, "steps_run": len(results), "results": results}

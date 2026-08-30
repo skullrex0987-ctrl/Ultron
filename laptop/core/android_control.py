@@ -52,10 +52,27 @@ class AndroidControl:
         return {"ok": r.returncode == 0}
 
     def launch(self, pkg: str, activity: str = "") -> dict:
-        cmd = f"monkey -p {pkg} -c android.intent.category.LAUNCHER 1"
-        r = self._adb("shell", *cmd.split())
-        log("adb", {"action": "launch", "pkg": pkg})
+        # Resolve a friendly name (e.g. "youtube") to a known pkg/activity.
+        if not activity and pkg.lower() in CFG.app_launch:
+            target = CFG.app_launch[pkg.lower()]
+            pkg, _, activity = target.partition("/")
+        # Prefer `am start -n pkg/activity` (works on HyperOS/Android 14;
+        # `monkey` is frequently blocked). Fall back to monkey if no activity.
+        if activity:
+            r = self._adb("shell", "am", "start", "-n", f"{pkg}/{activity}")
+        else:
+            r = self._adb("shell", "am", "start", "-a", "android.intent.action.MAIN",
+                          "-c", "android.intent.category.LAUNCHER", "-n", f"{pkg}/")
+            if r.returncode != 0:
+                r = self._adb("shell", "monkey", "-p", pkg,
+                              "-c", "android.intent.category.LAUNCHER", "1")
+        log("adb", {"action": "launch", "pkg": pkg, "rc": r.returncode})
         return {"ok": r.returncode == 0}
+
+    def reached(self, text: str) -> bool:
+        """Re-verify: is `text` now visible on screen? (post-action check)"""
+        pos = self.find_node(text)
+        return pos is not None
 
     def screen_size(self) -> tuple[int, int]:
         r = self._adb("shell", "wm", "size")

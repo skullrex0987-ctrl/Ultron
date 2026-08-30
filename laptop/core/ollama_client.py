@@ -81,23 +81,51 @@ def _clean(content: str) -> dict:
 
 
 class BrainClient:
-    def __init__(self, provider: Optional[LLMProvider] = None, model: Optional[str] = None):
-        if provider is None:
-            provider = build_provider("ollama", model or CFG.main_model)
-        self.provider = provider
+    def __init__(self, provider: Optional[LLMProvider] = None, model: Optional[str] = None,
+                 cloud: bool = None):
         self.model = model or CFG.main_model
+        if provider is None:
+            # local-first: Ollama by default
+            self.provider = build_provider("ollama", self.model)
+            # opt-in cloud fallback (Q10 B): wire a cloud provider if configured
+            self.cloud = None
+            use_cloud = CFG.use_cloud_fallback if cloud is None else cloud
+            if use_cloud and CFG.cloud_base_url and CFG.cloud_api_key:
+                name = CFG.cloud_provider or "openrouter"
+                self.cloud = build_provider(name, CFG.cloud_model or self.model,
+                                            api_key=CFG.cloud_api_key,
+                                            base_url=CFG.cloud_base_url)
+        else:
+            self.provider = provider
+            self.cloud = None
         self.history: list[ChatMessage] = [ChatMessage("system", SYSTEM_PROMPT)]
+        self._using_cloud = False
 
     def chat(self, user_text: str, max_steps: int = 15) -> dict:
         self.history.append(ChatMessage("user", user_text))
         msgs = [{"role": m.role, "content": m.content} for m in self.history]
-        raw = self.provider.chat(msgs)
+        try:
+            raw = self.provider.chat(msgs)
+            self._using_cloud = False
+        except Exception:
+            # auto-reroute to cloud if available (Q10 B)
+            if self.cloud is not None:
+                raw = self.cloud.chat(msgs)
+                self._using_cloud = True
+            else:
+                raise
         parsed = _clean(raw)
         self.history.append(ChatMessage("assistant", raw))
         return parsed
 
     def health(self) -> bool:
-        return self.provider.health()
+        if self.provider.health():
+            return True
+        return bool(self.cloud) and self.cloud.health()
+
+    @property
+    def active_provider(self) -> str:
+        return "cloud" if self._using_cloud else "ollama"
 
     def ensure_model(self) -> bool:
         # Ollama auto-pull (Q13 A)

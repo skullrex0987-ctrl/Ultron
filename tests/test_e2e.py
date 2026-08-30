@@ -46,6 +46,9 @@ class FakeAndroid:
                 return ((x1 + x2) // 2, (y1 + y2) // 2)
         return None
 
+    def reached(self, text):
+        return self.find_node(text) is not None
+
     def tap(self, x, y):
         self.calls.append(("tap", x, y))
         return {"ok": True}
