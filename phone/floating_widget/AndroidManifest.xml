@@ -1,0 +1,20 @@
+<!-- Floating widget Android app (Kotlin). No root.
+  - Transparent overlay service draws a draggable bubble.
+  - Tap bubble -> open ULTRON app / phone web HUD (http://localhost:8080).
+  - Hold bubble -> start Vosk STT (Hin+Eng), stream transcript to the agent.
+  - Wake-word listener runs Vosk continuously in a low-power mode.
+  This is the native shell; the "brain" is the Termux Python agent + web HUD.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.ultron.floatwidget">
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application android:allowBackup="true" android:label="ULTRON Widget">
+        <service android:name=".FloatingService" android:exported="false"/>
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+        </activity>
+    </application>
+</manifest>

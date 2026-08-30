@@ -1,0 +1,16 @@
+{
+  "name": "ultron-orb",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo 'orb-apk is a static bundle; nothing to compile. Use `npx cap sync android` then build.'",
+    "cap:sync": "npx cap sync android",
+    "android:debug": "cd android && ./gradlew assembleDebug",
+    "android:release": "cd android && ./gradlew assembleRelease"
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.1.0",
+    "@capacitor/cli": "^6.1.0",
+    "@capacitor/android": "^6.1.0"
+  }
+}
