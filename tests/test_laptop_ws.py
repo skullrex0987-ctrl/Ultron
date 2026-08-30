@@ -17,6 +17,10 @@ sys.path.insert(0, ROOT)
 
 class TestLaptopWsE2E(unittest.TestCase):
     def test_hud_link_roundtrip(self):
+        try:
+            import websockets  # noqa
+        except Exception:
+            self.skipTest("websockets not installed in this interpreter")
         import main as core_mod
 
         # mock the brain so no real model is needed
