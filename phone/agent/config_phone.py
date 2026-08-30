@@ -11,10 +11,10 @@ from dataclasses import dataclass
 
 @dataclass
 class PhoneConfig:
-    ollama_host: str = os.getenv("JARVIS_OLLAMA", "http://127.0.0.1:11434")
-    mini_model: str = os.getenv("JARVIS_MINI_MODEL", "qwen3.5:0.8b")
-    laptop_host: str = os.getenv("JARVIS_LAPTOP", "http://192.168.1.1:8765")
-    pair_code: str = os.getenv("JARVIS_PAIR_CODE", "ultron")
+    ollama_host: str = os.getenv("ULTRON_OLLAMA", "http://127.0.0.1:11434")
+    mini_model: str = os.getenv("ULTRON_MINI_MODEL", "qwen3.5:0.8b")
+    laptop_host: str = os.getenv("ULTRON_LAPTOP", "http://192.168.1.1:8765")
+    pair_code: str = os.getenv("ULTRON_PAIR_CODE", "ultron")
     device_name: str = "poco-x6pro"
     use_accessibility: bool = True
     stt_lang: str = "hi"  # Vosk Hin+Eng; switch per input
@@ -24,7 +24,9 @@ class PhoneConfig:
     piper_model: str = os.getenv("PIPER_MODEL", "en_US-lessac-medium.onnx")
     auto_execute: bool = True
     require_step_prompt: bool = True
-    audit_log: str = os.getenv("JARVIS_AUDIT", "/data/data/com.termux/files/home/ultron/audit.jsonl")
+    kill_switch_file: str = os.getenv("ULTRON_KILL", "/tmp/ultron_phone_kill")
+    max_step_hard_cap: int = 200
+    audit_log: str = os.getenv("ULTRON_AUDIT", "/data/data/com.termux/files/home/ultron/audit.jsonl")
 
 
 CFG = PhoneConfig()

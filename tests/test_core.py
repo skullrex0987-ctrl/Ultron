@@ -59,6 +59,27 @@ class TestToolRouting(unittest.TestCase):
         self.assertTrue(r["ok"])
 
 
+class TestModels(unittest.TestCase):
+    def test_resolve_local(self):
+        from models import resolve
+        c = resolve("qwen3.5:4b")
+        self.assertEqual(c.source, "ollama")
+        self.assertEqual(c.model, "qwen3.5:4b")
+
+    def test_resolve_cloud(self):
+        from models import resolve
+        c = resolve("openrouter:anthropic/claude-3.5-sonnet")
+        self.assertEqual(c.source, "openrouter")
+        self.assertEqual(c.model, "anthropic/claude-3.5-sonnet")
+
+    def test_resolve_custom(self):
+        from models import resolve
+        c = resolve("custom|http://h:1/v1|KEY|mymodel")
+        self.assertEqual(c.source, "custom")
+        self.assertEqual(c.base_url, "http://h:1/v1")
+        self.assertEqual(c.model, "mymodel")
+
+
 class TestOllamaParse(unittest.TestCase):
     """Robustness of the JSON extraction used by ollama_client.chat."""
 
@@ -123,8 +144,17 @@ class TestAndroidControl(unittest.TestCase):
 
     def test_launch(self):
         with mock.patch.object(self.a, "_adb", return_value=types.SimpleNamespace(returncode=0)) as m:
-            self.a.launch("com.example.app")
-            self.assertIn("monkey", m.call_args[0])
+            r = self.a.launch("com.example.app")
+            # modern Android (HyperOS) uses `am start`, not monkey
+            self.assertIn("am", m.call_args[0])
+            self.assertTrue(r["ok"])
+
+    def test_launch_known_app_resolves_activity(self):
+        with mock.patch.object(self.a, "_adb", return_value=types.SimpleNamespace(returncode=0)) as m:
+            r = self.a.launch("youtube")
+            self.assertIn("am", m.call_args[0])
+            self.assertIn("com.google.android.youtube/.MainActivity", m.call_args[0])
+            self.assertTrue(r["ok"])
 
     def test_find_node_parses_bounds(self):
         import xml.etree.ElementTree as ET
