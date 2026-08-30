@@ -16,8 +16,13 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-import websockets  # type: ignore
 from typing import Optional
+
+try:
+    import websockets  # type: ignore
+    _HAVE_WS = True
+except Exception:  # pragma: no cover
+    _HAVE_WS = False
 
 from config import CFG
 from audit import log, transcript
