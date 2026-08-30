@@ -135,6 +135,20 @@ addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProje
 async def index():
     return INDEX
 
+
+@app.post("/talk")
+async def talk():
+    """Floating widget / button asks the agent to start listening (Vosk STT).
+    Relay a `talk` message to the agent WebSocket on :8081."""
+    try:
+        import websockets
+        import asyncio
+        async with websockets.connect("ws://127.0.0.1:8081") as ws:
+            await ws.send(json.dumps({"type": "talk"}))
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 @app.websocket("/ws")
 async def ws_ep(ws: WebSocket):
     await ws.accept(); CLIENTS.add(ws)
