@@ -190,7 +190,10 @@ class PhoneAgent:
             await asyncio.Future()
 
     def run(self):
-        self.connect_laptop()
+        # start the mesh WebSocket server immediately (non-blocking) so the web
+        # HUD + laptop bridge can connect without waiting on LAN discovery.
+        import threading
+        threading.Thread(target=self.connect_laptop, daemon=True).start()
         if self.loop is None:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
@@ -205,4 +208,8 @@ if __name__ == "__main__":
     print("local brain:", a.local.health())
     print("discover laptop:", a.connect_laptop())
     print("status:", a.status())
-    print("intent:", a.chat("open youtube and search cats"))
+    # start the mesh WebSocket server (web HUD + laptop bridge connect here)
+    try:
+        a.run()
+    except KeyboardInterrupt:
+        print("\nstopped")
