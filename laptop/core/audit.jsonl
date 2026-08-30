@@ -248,3 +248,57 @@
 {"ts": 1788122527.4503038, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
 {"ts": 1788122527.45058, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
 {"ts": 1788122527.450812, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788122558.3613975, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788122558.3640022, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788122558.3711503, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788122558.3737023, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788122558.3760443, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788122558.4285636, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788122558.4391088, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788122558.4471447, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788122558.4539597, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788122558.4663806, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788122558.466971, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788122558.4676595, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200}}
+{"ts": 1788122558.4680965, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788122558.4688807, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788122558.4695244, "side": "laptop", "event": "tool", "data": {"tool": "adb", "cmd": "find \"YouTube\""}}
+{"ts": 1788122558.4700468, "side": "laptop", "event": "agent", "data": {"event": "step-done", "tool": "adb", "ok": true, "res": {"ok": true, "found": "YouTube", "tapped": {"ok": true}}}}
+{"ts": 1788122558.4707615, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788122558.4711895, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788122558.471599, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788122561.781352, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788122561.7854197, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788122561.7996995, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788122561.8055003, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788122561.8100154, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788122562.090602, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788122562.2241364, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788122562.2302423, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788122562.2343163, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788122562.3587403, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788122562.3607514, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788122562.362342, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200}}
+{"ts": 1788122562.36471, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788122562.367417, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788122562.3690534, "side": "laptop", "event": "tool", "data": {"tool": "adb", "cmd": "find \"YouTube\""}}
+{"ts": 1788122562.3714523, "side": "laptop", "event": "agent", "data": {"event": "step-done", "tool": "adb", "ok": true, "res": {"ok": true, "found": "YouTube", "tapped": {"ok": true}}}}
+{"ts": 1788122562.37723, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788122562.379064, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788122562.380579, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788122562.8906531, "side": "laptop", "event": "core", "data": {"event": "hud-ws", "port": 8766}}
+{"ts": 1788122563.7675545, "side": "laptop", "event": "transcript", "data": {"who": "user", "text": "open youtube"}}
+{"ts": 1788122563.7712054, "side": "laptop", "event": "core", "data": {"event": "goal-error", "err": "'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.7775922, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Error: 'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.7881222, "side": "laptop", "event": "transcript", "data": {"who": "user", "text": "stop"}}
+{"ts": 1788122563.792389, "side": "laptop", "event": "core", "data": {"event": "goal-error", "err": "'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.79938, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Error: 'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.8066409, "side": "laptop", "event": "transcript", "data": {"who": "user", "text": "stop"}}
+{"ts": 1788122563.809482, "side": "laptop", "event": "core", "data": {"event": "goal-error", "err": "'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.814102, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Error: 'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.8201394, "side": "laptop", "event": "transcript", "data": {"who": "user", "text": "stop"}}
+{"ts": 1788122563.8232808, "side": "laptop", "event": "core", "data": {"event": "goal-error", "err": "'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.8288937, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Error: 'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.8400085, "side": "laptop", "event": "transcript", "data": {"who": "user", "text": "stop"}}
+{"ts": 1788122563.8483968, "side": "laptop", "event": "core", "data": {"event": "goal-error", "err": "'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
+{"ts": 1788122563.8548267, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Error: 'types.SimpleNamespace' object has no attribute 'set_prompt'"}}
