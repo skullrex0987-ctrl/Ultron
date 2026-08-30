@@ -70,7 +70,64 @@ def web_fetch(url: str) -> dict:
         return {"ok": False, "reason": str(e)}
 
 
-def dispatch(tool_call: dict, confirm: Optional[Callable[[str], bool]] = None) -> dict:
+def plan(goal: str) -> dict:
+    """Break a goal into ordered steps (used by the agent before acting)."""
+    log("tool", {"tool": "plan", "goal": goal})
+    steps = [s.strip() for s in goal.replace(";", ".").split(".") if s.strip()]
+    return {"ok": True, "goal": goal, "steps": steps or [goal]}
+
+
+def adb(android, raw: str) -> dict:
+    """Execute a structured adb command on the linked phone.
+
+    Supported sub-commands (model emits these as plain text):
+      tap X Y
+      swipe x1 y1 x2 y2 [ms]
+      text "some text"
+      keyevent KEY
+      launch pkg
+      find "visible text"     -> locate via UiAutomator and tap center
+      home / back / recent
+    Returns a normalized result dict.
+    """
+    if android is None:
+        return {"ok": False, "reason": "no-android-connected"}
+    s = raw.strip()
+    log("tool", {"tool": "adb", "cmd": s})
+    try:
+        if s.startswith("tap"):
+            _, x, y = s.split()
+            return {"ok": True, **android.tap(int(x), int(y))}
+        if s.startswith("swipe"):
+            parts = s.split()
+            x1, y1, x2, y2 = map(int, parts[1:5])
+            ms = int(parts[5]) if len(parts) > 5 else 300
+            return {"ok": True, **android.swipe(x1, y1, x2, y2, ms)}
+        if s.startswith("text"):
+            txt = s[len("text"):].strip().strip('"').strip("'")
+            return {"ok": True, **android.type_text(txt)}
+        if s.startswith("keyevent"):
+            return {"ok": True, **android.keyevent(s.split()[1])}
+        if s.startswith("launch"):
+            return {"ok": True, **android.launch(s.split()[1])}
+        if s.startswith("find"):
+            txt = s[len("find"):].strip().strip('"').strip("'")
+            pos = android.find_node(txt)
+            if pos:
+                return {"ok": True, "found": txt, "tapped": android.tap(*pos)}
+            return {"ok": False, "reason": f"not-found:{txt}"}
+        if s in ("home", "back", "recent"):
+            code = {"home": "3", "back": "4", "recent": "187"}[s]
+            return {"ok": True, **android.keyevent(code)}
+        # fallback: raw passthrough (legacy)
+        r = android._adb(*s.split())
+        return {"ok": r.returncode == 0, "rc": r.returncode}
+    except Exception as e:  # noqa
+        return {"ok": False, "reason": f"adb-error:{e}"}
+
+
+def dispatch(tool_call: dict, confirm: Optional[Callable[[str], bool]] = None,
+             android=None) -> dict:
     """Route a structured tool call (from OllamaClient.chat) to the right tool."""
     name = tool_call.get("tool")
     args = tool_call.get("args", {}) or {}
@@ -82,6 +139,10 @@ def dispatch(tool_call: dict, confirm: Optional[Callable[[str], bool]] = None) -
         return file_write(args.get("path", ""), args.get("content", ""))
     if name == "web_fetch":
         return web_fetch(args.get("url", ""))
+    if name == "plan":
+        return plan(args.get("goal", ""))
+    if name == "adb":
+        return adb(android, args.get("cmd", ""))
     if name == "reply":
         return {"ok": True, "reply": args.get("text", "")}
     return {"ok": False, "reason": f"unknown-tool:{name}"}
@@ -93,7 +154,7 @@ TOOL_DOCS = {
     "file_read": "Read a file. args: {path}",
     "file_write": "Write a file. args: {path, content}",
     "web_fetch": "Fetch a URL. args: {url}",
-    "adb": "Run adb on linked phone. args: {cmd}",
-    "plan": "Plan steps for a goal. args: {goal}",
+    "adb": "Control the linked Android phone. args: {cmd: 'tap X Y' | 'swipe x1 y1 x2 y2' | 'text \"hi\"' | 'keyevent KEY' | 'launch pkg' | 'find \"YouTube\"' | 'home' | 'back' | 'recent'}",
+    "plan": "Break a goal into steps. args: {goal}",
     "reply": "Speak to the user. args: {text}",
 }

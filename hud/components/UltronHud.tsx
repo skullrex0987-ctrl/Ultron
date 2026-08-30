@@ -29,6 +29,39 @@ export default function UltronHud() {
   const [transcript, setTranscript] = useState<string[]>([]);
   const [link, setLink] = useState<string>("disconnected");
   const [wake, setWake] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // browser TTS (Q8 B) — speak ULTRON replies
+  const speak = useCallback((text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.02; u.pitch = 0.9;
+    const voices = window.speechSynthesis.getVoices();
+    const en = voices.find((v) => /en[-_]US/i.test(v.lang)) || voices[0];
+    if (en) u.voice = en;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }, []);
+
+  // browser STT (Web Speech API) — real microphone capture -> core
+  const startListening = useCallback(() => {
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { setError("SPEECH RECOGNITION NOT SUPPORTED IN THIS BROWSER"); return; }
+    const rec = new SR();
+    rec.lang = "en-US"; rec.interimResults = false; rec.continuous = false;
+    rec.onresult = (e: any) => {
+      const text = e.results[0][0].transcript.trim();
+      if (text) {
+        setTranscript((t) => [...t.slice(-8), `YOU: ${text}`]);
+        bridgeRef.current?.send({ type: "transcript", text });
+      }
+    };
+    rec.onend = () => setAgent((a) => (a === "listening" ? "idle" : a));
+    rec.onerror = () => setAgent((a) => (a === "listening" ? "idle" : a));
+    recognitionRef.current = rec;
+    rec.start();
+    setAgent("listening");
+  }, []);
 
   // audio-reactive binding
   useEffect(() => {
@@ -49,7 +82,9 @@ export default function UltronHud() {
       }
       if (m.type === "transcript") {
         setTranscript((t) => [...t.slice(-8), `${m.who === "user" ? "YOU" : "ULTRON"}: ${m.text}`]);
+        if (m.who !== "user") speak(String(m.text));
       }
+      if (m.type === "tts") speak(String(m.text));
       if (m.type === "link") setLink(String(m.status));
     });
     bridge.connect();
@@ -118,9 +153,8 @@ export default function UltronHud() {
   }, [toggleGestures, wake]);
 
   const triggerTalk = useCallback(() => {
-    bridgeRef.current?.send({ type: "talk" });
-    setAgent("listening");
-  }, []);
+    startListening();
+  }, [startListening]);
 
   const cameraOn = camera === "on";
 
