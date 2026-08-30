@@ -55,6 +55,10 @@ class Bridge:
                 writer.write(b"DENIED\n")
                 await writer.drain()
                 return
+            # ACK so the client knows pairing succeeded (avoids a handshake
+            # deadlock: client was waiting for a reply before sending hello).
+            writer.write(b"OK\n")
+            await writer.drain()
             hello = (await reader.readline()).decode().strip()
             info = json.loads(hello)
             self.peers[peer_id] = {"name": info.get("name", "peer"),
