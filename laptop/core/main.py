@@ -75,8 +75,13 @@ class Core:
         self.busy = True
         transcript(text, who="user")
         await self._send_hud({"type": "state", "state": "thinking"})
+        # run the long autonomous agent OFF the event loop (it can take seconds)
+        await self.loop.run_in_executor(None, self._run_agent, text)
+        self.busy = False
+        await self._send_hud({"type": "state", "state": "idle"})
+
+    def _run_agent(self, text: str):
         try:
-            # run the autonomous agent; replies stream back via on_reply
             self.agent.set_prompt(self._prompt_steps)
             self.agent.run(text)
         except KillSwitch:
@@ -84,9 +89,6 @@ class Core:
         except Exception as e:  # noqa
             log("core", {"event": "goal-error", "err": str(e)})
             transcript(f"Error: {e}", who="ultron")
-        finally:
-            self.busy = False
-            await self._send_hud({"type": "state", "state": "idle"})
 
     def _on_reply(self, text: str):
         # TTS is handled in the browser; core just signals it + animates the orb
