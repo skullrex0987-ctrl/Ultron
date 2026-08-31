@@ -16,6 +16,10 @@ and links the two over your local network. Status below is honest: ✅ verified,
 - Full model choice: any local Ollama model, or any cloud/custom OpenAI-style endpoint,
   with automatic cloud fallback when Ollama is down.
 - Offline STT (Vosk, auto Hindi+English) + TTS (Piper on phone, browser on laptop).
+- Offline wake-word voice activation on laptop **and** phone (say "ultron"); plus a standalone
+  `laptop/wake_ultron.py` that voice-activates the laptop without running the whole stack.
+- Structured output (formatted / sectioned answers) + **research mode** (web fetch with
+  citations).
 - Screen perception: screenshot + OCR (mode B) and UiAutomator dump (mode C).
 - 31 automated tests (unit + e2e + mesh + WS) passing.
 - Build-ready Capacitor `android/` project committed; one-command Windows build script.
@@ -30,7 +34,6 @@ and links the two over your local network. Status below is honest: ✅ verified,
 
 ## ⬜ Planned / ideas
 - Smarter multi-turn planner with dependency graph between steps.
-- Wake-word offline trigger (currently the TALK button / hold gesture).
 - Cross-device "continue on the other screen" hand-off.
 - Encrypted mesh pairing persisted across reboots.
 - Plugin system for new tools without touching the core loop.

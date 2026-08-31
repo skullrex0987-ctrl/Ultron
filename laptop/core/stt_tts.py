@@ -110,6 +110,13 @@ class VoiceListener:
     def stop(self):
         self._stop = True
 
+class VoskSTT:
+    """Vosk-based offline STT (headless fallback).
+
+    Auto Hin+Eng: feed the stream to hi + en recognizers, emit final text.
+    The browser uses Web Speech; this is for running core without a browser.
+    """
+
     def __init__(self, lang: str = "en"):
         self.lang = lang
         try:

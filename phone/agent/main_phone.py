@@ -26,10 +26,11 @@ except Exception:  # pragma: no cover
 
 from config_phone import CFG
 from ollama_phone import PhoneLLM
-from tools_phone import dispatch, adb_self
+from tools_phone import dispatch, adb_self, format_reply
 from android_phone import PhoneControl
 from bridge_client import auto_link, LaptopLink
 from stt_tts_phone import VoskSTT, PiperTTS
+from voice_phone import VoiceListener
 
 
 def log(side: str, data: dict):
@@ -48,6 +49,7 @@ class PhoneAgent:
         self.linked = False
         self.link: Optional[LaptopLink] = None
         self.tts = PiperTTS()
+        self.voice = VoiceListener()
         self.kill_file = CFG.kill_switch_file
         self.max_steps = CFG.max_step_hard_cap
         self.hud_clients: set = set()
@@ -144,19 +146,32 @@ class PhoneAgent:
     def run_task(self, goal: str, steps: int) -> dict:
         self.android.ensure()
         log = []
+        last_sources: list = []
         for i in range(steps):
             self._check_kill()
             scene = self._perceive()
+            hint = ""
+            gl = (goal or "").lower()
+            if any(h in gl for h in ("what is", "who is", "research", "find out",
+                                     "latest", "look up")) or gl.strip().endswith("?"):
+                hint = ("\nRESEARCH MODE: call {\"tool\": \"research\", \"args\": "
+                        "{\"query\": \"" + goal + "\"}} first, then reply with a "
+                        "summary ending in a 'Sources:' list.\n") if not last_sources else \
+                       "\nRESEARCH MODE: research done - now reply with a summary plus a 'Sources:' list.\n"
             call = self.chat(
-                f"Goal: {goal}\nStep {i+1}/{steps}\nScreen: {scene}\nNext single tool call?")
+                f"Goal: {goal}\nStep {i+1}/{steps}\n{hint}Screen: {scene}\nNext single tool call?")
             tool = call.get("tool")
             if tool == "reply":
-                txt = call.get("args", {}).get("text", "")
+                txt = format_reply(call.get("args", {}).get("text", ""))
+                if last_sources and "Sources:" not in txt:
+                    txt = txt + "\n\nSources:\n" + "\n".join(f"- {s}" for s in last_sources)
                 log.append({"reply": txt})
                 self._speak(txt)
                 self._send_hud_sync({"type": "transcript", "who": "ultron", "text": txt})
                 break
             res = dispatch(call, self.ctrl)
+            if tool == "research" and res.get("sources"):
+                last_sources = list(res.get("sources") or [])
             log.append({"tool": tool, "res": res})
             if tool == "adb" and not res.get("ok") and "not-found" in str(res.get("reason", "")):
                 break
@@ -189,11 +204,37 @@ class PhoneAgent:
             log("phone", {"event": "ws-up", "port": 8081})
             await asyncio.Future()
 
+    # ---- native offline wake-word voice activation ----
+    def _voice_state(self, s: str):
+        """Mirror voice-listener state changes to the web HUD orb."""
+        self._send_hud_sync({"type": "state", "state": s})
+
+    def _voice_command(self, text: str):
+        """Run a spoken command captured after the wake word (offline)."""
+        if self.busy or not text:
+            return
+        self.busy = True
+        try:
+            self._send_hud_sync({"type": "transcript", "who": "user", "text": text})
+            self._send_hud_sync({"type": "state", "state": "thinking"})
+            self.run_task(text, self.max_steps)
+        finally:
+            self.busy = False
+            self._send_hud_sync({"type": "state", "state": "idle"})
+
     def run(self):
         # start the mesh WebSocket server immediately (non-blocking) so the web
         # HUD + laptop bridge can connect without waiting on LAN discovery.
         import threading
         threading.Thread(target=self.connect_laptop, daemon=True).start()
+        # continuous offline wake-word voice activation (background thread)
+        if getattr(self, "voice", None):
+            if self.voice.available:
+                self.voice.start(self._voice_command, self._voice_state)
+                log("phone", {"event": "voice-wake", "available": True})
+            else:
+                log("phone", {"event": "voice-wake", "available": False,
+                              "note": "sounddevice/vosk missing on device"})
         if self.loop is None:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)

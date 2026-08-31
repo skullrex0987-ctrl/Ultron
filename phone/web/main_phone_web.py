@@ -88,6 +88,10 @@ body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#ffaa3
 button{background:rgba(20,10,0,.6);border:1px solid #ffaa30;color:#ffaa30;
 font-family:monospace;padding:8px 12px;border-radius:4px;margin-left:4px}
 canvas{display:block}
+.cmdbar{bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;
+z-index:7;pointer-events:auto}
+.cmdbar input{background:rgba(20,10,0,.7);border:1px solid #ffaa30;color:#ffaa30;
+font-family:monospace;padding:8px 10px;border-radius:4px;width:46vw;outline:none}
 </style></head>
 <body>
 <div id="orb"></div>
@@ -97,6 +101,7 @@ canvas{display:block}
 <div class="hud tr" id="tr"></div>
 <div class="hud hint">PINCH talk · OPEN-PALM listen · PEACE shot · THUMBS vol · SWIPE nav</div>
 <div class="hud btn"><button id="g">GESTURES</button><button id="t">TALK</button></div>
+<div class="hud cmdbar"><input id="cmd" type="text" placeholder="type a goal…" autocomplete="off"><button id="send">SEND</button></div>
 <script type="module">
 import * as THREE from "https://esm.sh/three@0.160";
 import {HandLandmarker,FilesetResolver} from "https://esm.sh/@mediapipe/tasks-vision@0.10.35";
@@ -159,6 +164,9 @@ ws&&ws.addEventListener('message',e=>{const m=JSON.parse(e.data);
     t.innerHTML+=`<div>${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;}});
 document.getElementById('t').onclick=()=>ws&&ws.send(JSON.stringify({type:'talk'}));
 document.getElementById('g').onclick=()=>ws&&ws.send(JSON.stringify({type:'gestures'}));
+// typed goal input (pointer-events:auto) -> send {type:'goal',goal:text}
+document.getElementById('send').onclick=()=>{const i=document.getElementById('cmd');const v=i.value.trim();if(v){ws&&ws.send(JSON.stringify({type:'goal',goal:v}));i.value='';}};
+document.getElementById('cmd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('send').click();});
 addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight);});
 </script></body></html>
 """

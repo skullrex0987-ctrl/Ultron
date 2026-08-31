@@ -13,7 +13,7 @@ from typing import Callable, Optional
 from config import CFG
 from audit import log, transcript
 from ollama_client import BrainClient
-from tools import dispatch
+from tools import dispatch, format_reply
 from android_control import AndroidControl
 from perception import perceive
 
@@ -25,6 +25,21 @@ class KillSwitch(Exception):
 def _check_kill() -> None:
     if os.path.exists(CFG.kill_switch_file):
         raise KillSwitch(f"kill-switch file present: {CFG.kill_switch_file}")
+
+
+RESEARCH_HINTS = ("what is", "what's", "who is", "who's", "research", "find out",
+                  "latest", "news about", "explain", "how does", "why does",
+                  "current price", "look up", "search the web")
+
+
+def is_research_goal(goal: str) -> bool:
+    """True if the goal reads like a research question (steer to `research`)."""
+    g = (goal or "").lower().strip()
+    if not g:
+        return False
+    if any(h in g for h in RESEARCH_HINTS):
+        return True
+    return g.endswith("?")
 
 
 class Agent:
@@ -60,9 +75,23 @@ class Agent:
     def _decide(self, goal: str, step: int, steps: int, scene: dict, history: list[str], plan: list[str] | None = None) -> dict:
         hist = "\n".join(f"  - {h}" for h in history[-6:]) or "  (none yet)"
         plan_txt = ("\nPlanned steps: " + " -> ".join(str(p) for p in (plan or [])) + "\n") if plan else ""
+        research_txt = ""
+        if is_research_goal(goal):
+            done_research = any("research" in h for h in history)
+            if done_research:
+                research_txt = (
+                    "\nRESEARCH MODE: you already called `research`. Now respond with "
+                    "tool 'reply' summarizing the findings in clean Markdown, ending "
+                    "with a 'Sources:' list of the URLs returned.\n")
+            else:
+                research_txt = (
+                    "\nRESEARCH MODE: this goal is a research question. Your next tool "
+                    "call MUST be {\"tool\": \"research\", \"args\": {\"query\": \"" + goal +
+                    "\"}}. After it returns, reply with a summary plus a 'Sources:' list.\n")
         ctx = (
             f"Goal: {goal}\n"
             f"Step {step+1}/{steps}\n"
+            f"{plan_txt}{research_txt}"
             f"Current screen/context: {scene}\n"
             f"What you already tried this task (do NOT repeat a failed action):\n{hist}\n"
             "Decide the SINGLE next tool call to make progress. "
@@ -84,6 +113,7 @@ class Agent:
         self.android.connect()
         results = []
         history: list[str] = []
+        last_sources: list[str] = []
         unlocked = False
         plan_steps: list[str] = []
         if use_plan:
@@ -125,6 +155,10 @@ class Agent:
             tool = call.get("tool")
             if tool == "reply":
                 text = call.get("args", {}).get("text", "")
+                text = format_reply(text)
+                if last_sources and "Sources:" not in text:
+                    text = text + "\n\nSources:\n" + "\n".join(
+                        f"- {s}" for s in last_sources)
                 transcript(text, who="ultron")
                 if self.on_reply:
                     self.on_reply(text)
@@ -132,6 +166,12 @@ class Agent:
                 break
 
             res = dispatch(call, android=self.android)
+            if tool == "research":
+                srcs = res.get("sources") or []
+                if srcs:
+                    last_sources = list(srcs)
+                history.append("research -> " + str(len(last_sources)) + " sources; answer: "
+                               + str(res.get("answer", ""))[:1500])
             ok = res.get("ok", False)
             log("agent", {"event": "step-done", "tool": tool, "ok": ok, "res": res})
             results.append({"step": i, "tool": tool, "res": res})

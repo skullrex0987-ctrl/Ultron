@@ -28,11 +28,13 @@ fallback, never a requirement.
   cloud/custom endpoint (OpenRouter, TokenRouter, xKiro, OpenCode, OpenAI).
 - 🗣️ **Speech in/out** — browser mic + Web Speech on laptop; Vosk (Hin+Eng) +
   Piper on phone.
-- 🎙️ **Offline voice activation (laptop)** — the brain owns the laptop mic directly
-  (no browser permission click) and listens continuously for the wake word
-  **"ultron"**, then captures your command. The orb throbs/pulses on *listening*
-  and reacts on *thinking*/*speaking* — true Iron-Man-style, fully offline
-  (Vosk + `sounddevice`). See `STEP_BY_STEP.md` Part 2.
+- 🎙️ **Offline voice activation (laptop + phone)** — say the wake word **"ultron"** and the
+  assistant starts listening on **both** devices, fully offline (Vosk + `sounddevice`), no
+  button. A standalone `laptop/wake_ultron.py` wakes the laptop alone. Details in the
+  *Voice & Input* section below.
+- 🧾 **Structured output + research mode** — the agent produces formatted, sectioned answers
+  (lists / tables / steps) and can run a **research** mode that fetches web pages and replies
+  **with citations**.
 - ✋ **Gesture-reactive orb** — premium audio/gesture-reactive orb on laptop,
   phone-web, and the standalone APK.
 - 🤖 **Hermes-style tools** — shell, file read/write, web fetch, and ADB device
@@ -42,6 +44,41 @@ fallback, never a requirement.
 - 🛑 **Safety built in** — global kill-switch file, per-task step cap, and
   destructive-command confirmation. Every action is written to an audit log.
 - 📦 **Build your own APK** — `phone/orb-apk/build-apk.sh` / `build-apk.ps1`.
+
+---
+
+## 🎙️ Voice & Input
+
+ULTRON listens **and** types on every surface — your laptop, your phone (web orb and
+standalone APK), and a standalone laptop wake script.
+
+### Voice activation
+
+Say the wake word **"ultron"** and the assistant starts listening — fully offline, no button,
+no cloud.
+
+- **Laptop** — `laptop/core/stt_tts.py`'s `VoiceListener` owns the laptop mic directly via
+  `sounddevice` + Vosk (no browser permission click), listens continuously for the wake word,
+  then captures your command. The orb throbs on *listening* and reacts on *thinking*/*speaking*
+  (Iron-Man-style, offline).
+- **Phone** — `phone/agent/voice_phone.py` provides the same offline wake-word listening on the
+  device (Hindi + English Vosk), so you can trigger it hands-free on the phone too.
+- **Standalone laptop wake** — `laptop/wake_ultron.py` is a single script that voice-activates
+  the laptop **without** running the whole stack. Handy for a quick "ultron, …" from the shell.
+
+> See `STEP_BY_STEP.md` Part 2 (laptop) and Part 3 (phone) for the exact wake flow.
+
+### Input methods
+
+You can talk **or** type on every surface — pick whichever fits:
+
+- **Laptop HUD** — the orb HUD has a **TALK** button (browser mic) *and* a type box.
+- **Phone web HUD** — now has a type box alongside voice.
+- **APK (standalone orb app)** — now has a type box alongside voice / wake-word.
+- **Wake word** — say **"ultron"** on laptop or phone to start voice input without touching
+  anything.
+- **Gesture** — the orb stays gesture-reactive on laptop, phone-web, and the APK (MediaPipe
+  webcam/pose); unchanged.
 
 ---
 

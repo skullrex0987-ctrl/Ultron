@@ -54,8 +54,15 @@ phone, and links the two over your local network. No cloud or API keys required.
    npm run dev
    ```
    Open the printed `http://localhost:3000` URL. You'll see the ULTRON orb.
-10. Click **TALK** (your browser asks mic permission), speak, and the orb thinks,
-    replies, and speaks back (browser TTS). Done — laptop side works.
+10. Click **TALK** (your browser asks mic permission) *or* type in the HUD **type box**,
+    speak/type, and the orb thinks, replies, and speaks back (browser TTS). You can also just
+    say the wake word **"ultron"** out loud and the brain starts listening on its own (offline,
+    Vosk + `sounddevice` — no button). For a quick shell wake **without** the whole stack, run:
+    ```bash
+    cd laptop
+    python wake_ultron.py
+    ```
+    Done — laptop side works.
 
 ---
 
@@ -87,7 +94,10 @@ phone, and links the two over your local network. No cloud or API keys required.
     pip install fastapi uvicorn websockets
     uvicorn main_phone_web:app --host 0.0.0.0 --port 8080
     ```
-    Open `http://127.0.0.1:8080` on the phone → you see the premium orb.
+    Open `http://127.0.0.1:8080` on the phone → you see the premium orb. On the phone HUD you
+    can **type** in the new type box *or* say the wake word **"ultron"** (offline, Vosk
+    Hindi+English via `phone/agent/voice_phone.py`) to start voice input hands-free. The
+    standalone **APK** has the same type box + wake-word.
 
 ---
 

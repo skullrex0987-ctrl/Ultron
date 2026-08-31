@@ -18,7 +18,10 @@ python main.py                     # starts brain WS on :8766 + mesh bridge
 # in another terminal, run the HUD:
 cd ../../hud && npm run dev         # open http://localhost:3000
 ```
-- Orb HUD: TALK button uses browser mic (Web Speech API) -> transcript -> brain.
+- Orb HUD: TALK button uses browser mic (Web Speech API) -> transcript -> brain; the HUD also
+  has a type box for typed input.
+- Standalone voice wake (no full stack): `cd laptop && python wake_ultron.py` — say "ultron"
+  and it activates the laptop mic (Vosk + sounddevice), fully offline.
 - Brain: qwen3.5:4b local; auto-reroutes to cloud if configured (ULTRON_CLOUD_FB=1 + ULTRON_CLOUD_URL/KEY).
 
 ## 2. PHONE (Termux mini-brain + web orb + floating widget)
@@ -29,6 +32,8 @@ python main_phone.py                # mini-brain qwen3.5:0.8b + WS on :8081 + me
 cd ../web && python -m uvicorn main_phone_web:app --host 0.0.0.0 --port 8080
 ```
 - Falls back to local 0.8b when laptop unreachable (full mesh Q1 A / Q23 A).
+- Voice on phone: say "ultron" to wake (offline Vosk Hin+Eng via phone/agent/voice_phone.py),
+  or use the web HUD / APK type box for typed input. No button needed.
 - Floating widget (Kotlin): see phone/floating_widget; build APK via Capacitor in phone/orb-apk.
 
 ## 3. LINK THE TWO (mesh)
