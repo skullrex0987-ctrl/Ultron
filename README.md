@@ -43,6 +43,10 @@ fallback, never a requirement.
   back to its own 0.8b model.
 - 🛑 **Safety built in** — global kill-switch file, per-task step cap, and
   destructive-command confirmation. Every action is written to an audit log.
+- 🔧 **Self-healing** — every subsystem is supervised: crashes auto-restart with
+  backoff, a health watchdog monitors the brain (Ollama) + mic and tries to recover
+  (e.g. `ollama pull` the model if it's missing), and a stuck-task guard aborts
+  hung runs. The orb turns **red ("recovering")** when it's fixing itself.
 - 📦 **Build your own APK** — `phone/orb-apk/build-apk.sh` / `build-apk.ps1`.
 
 ---

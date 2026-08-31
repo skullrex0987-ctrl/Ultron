@@ -30,6 +30,8 @@ from tools_phone import dispatch, adb_self, format_reply
 from android_phone import PhoneControl
 from bridge_client import auto_link, LaptopLink
 from stt_tts_phone import VoskSTT, PiperTTS
+import selfheal
+from selfheal import HealthWatch, check_ollama, pull_ollama
 from voice_phone import VoiceListener
 
 
@@ -53,6 +55,8 @@ class PhoneAgent:
         self.kill_file = CFG.kill_switch_file
         self.max_steps = CFG.max_step_hard_cap
         self.hud_clients: set = set()
+        # self-healing watchdog: monitor Ollama brain + voice availability
+        self.watch = HealthWatch(interval=20.0, on_state=self._on_heal_state)
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self.busy = False
 
@@ -222,6 +226,12 @@ class PhoneAgent:
             self.busy = False
             self._send_hud_sync({"type": "state", "state": "idle"})
 
+    def _on_heal_state(self, label: str, state: str, detail: str = ""):
+        if state in ("recovering", "error"):
+            self._send_hud_sync({"type": "state", "state": "recovering",
+                                 "detail": f"{label}: {detail}"[:80]})
+            log("phone", {"event": "heal", "label": label, "state": state, "detail": detail})
+
     def run(self):
         # start the mesh WebSocket server immediately (non-blocking) so the web
         # HUD + laptop bridge can connect without waiting on LAN discovery.
@@ -235,6 +245,15 @@ class PhoneAgent:
             else:
                 log("phone", {"event": "voice-wake", "available": False,
                               "note": "sounddevice/vosk missing on device"})
+        # self-healing: watch the local brain; try to pull the mini model if absent
+        if getattr(self, "watch", None):
+            self.watch.add("ollama-mini",
+                           lambda: check_ollama(CFG.mini_model)["reachable"],
+                           recover=lambda: pull_ollama(CFG.mini_model))
+            if getattr(self, "voice", None):
+                v = self.voice
+                self.watch.add("voice-mic", lambda: bool(v.available), recover=None)
+            self.watch.start()
         if self.loop is None:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)

@@ -1063,3 +1063,35 @@
 {"ts": 1788177469.1089752, "side": "laptop", "event": "tool", "data": {"tool": "research", "query": "https://example.net/doc"}}
 {"ts": 1788177469.1097622, "side": "laptop", "event": "tool", "data": {"tool": "research", "query": ""}}
 {"ts": 1788177469.1104577, "side": "laptop", "event": "tool", "data": {"tool": "research", "query": "what is ultron"}}
+{"ts": 1788178738.851292, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788178738.8574443, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788178738.8724437, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788178738.8762157, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788178738.8795395, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788178739.0129015, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788178743.8455908, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788178743.8528066, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788178743.860988, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788178743.9032867, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788178743.9077675, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788178743.9138088, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788178743.9165444, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788178743.9210398, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Plan: 3"}}
+{"ts": 1788178743.925208, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788178743.929343, "side": "laptop", "event": "tool", "data": {"tool": "adb", "cmd": "find \"YouTube\""}}
+{"ts": 1788178743.9322507, "side": "laptop", "event": "agent", "data": {"event": "step-done", "tool": "adb", "ok": true, "res": {"ok": true, "found": "YouTube", "tapped": {"ok": true}}}}
+{"ts": 1788178743.936554, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788178743.9392195, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788178743.941893, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788178743.9724255, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:6f302b42", "token": "6f302b42"}}
+{"ts": 1788178769.4572718, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "7c13bee1242d", "name": "poco-x6pro"}}
+{"ts": 1788178786.8133054, "side": "laptop", "event": "tool", "data": {"tool": "research", "query": "latest news"}}
+{"ts": 1788178786.8450048, "side": "laptop", "event": "tool", "data": {"tool": "research", "query": "https://example.net/doc"}}
+{"ts": 1788178786.8544998, "side": "laptop", "event": "tool", "data": {"tool": "research", "query": ""}}
+{"ts": 1788178786.8611922, "side": "laptop", "event": "tool", "data": {"tool": "research", "query": "what is ultron"}}
+{"ts": 1788178786.8693342, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"side": "selfheal", "event": "unhealthy", "label": "svc"}
+{"side": "selfheal", "event": "recovered", "label": "svc"}
+{"side": "selfheal", "event": "stuck-abort", "idle_steps": 8}
+{"side": "selfheal", "event": "restart", "subsystem": "t", "attempt": 1, "err": "boom"}
+{"side": "selfheal", "event": "restart", "subsystem": "t", "attempt": 2, "err": "boom"}

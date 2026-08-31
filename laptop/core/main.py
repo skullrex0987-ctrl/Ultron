@@ -29,6 +29,8 @@ from audit import log, transcript
 from ollama_client import BrainClient
 from agent import Agent, KillSwitch
 from bridge import Bridge, start_bridge_in_thread, get_local_ip
+import selfheal
+from selfheal import Supervisor, HealthWatch, check_ollama, ensure_vosk_model, pull_ollama
 
 
 class Core:
@@ -46,6 +48,9 @@ class Core:
             self.voice = VoiceListener(wake_phrase="ultron", lang="en")
         except Exception:
             self.voice = None
+        # self-healing: supervisor restarts subsystems; watchdog monitors health
+        self.supervisor = None
+        self.watch = HealthWatch(interval=15.0, on_state=self._on_heal_state)
 
     # ---- HUD websocket (orb frontend) ----
     async def hud_handler(self, ws):
@@ -169,10 +174,29 @@ class Core:
                 self._send_hud({"type": "transcript", "who": who, "text": text}),
                 self.loop)
 
+    def _on_heal_state(self, label: str, state: str, detail: str = ""):
+        # reflect self-heal events on the orb (recovering/error) so the user sees it
+        if state in ("recovering", "error"):
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(
+                    self._send_hud({"type": "state", "state": "recovering",
+                                    "detail": f"{label}: {detail}"[:80]}), self.loop)
+            log("core", {"event": "heal", "label": label, "state": state, "detail": detail})
+
     async def serve_hud(self):
         self.loop = asyncio.get_event_loop()
         # start native laptop-mic voice activation (offline "ultron" wake word)
         self.start_voice()
+        # self-healing watchdog: monitor Ollama brain + voice availability
+        def _pull():
+            pull_ollama(CFG.main_model)
+        self.watch.add("ollama-brain",
+                       lambda: check_ollama(CFG.main_model)["reachable"],
+                       recover=_pull)
+        if self.voice is not None:
+            v = self.voice
+            self.watch.add("voice-mic", lambda: bool(v.available), recover=None)
+        self.watch.start()
         async with websockets.serve(self.hud_handler, "127.0.0.1", 8766):
             log("core", {"event": "hud-ws", "port": 8766})
             await asyncio.Future()
