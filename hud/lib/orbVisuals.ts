@@ -177,13 +177,14 @@ export function createPremiumOrb(): PremiumOrb {
       nebulaMat.color.lerp(nebulaTint, 0.05);
       shellUniforms.uColor.value.lerp(shellTint, 0.05);
 
-      const breathe = 1 + Math.sin(t * 0.8) * 0.04 + audio * 0.5;
+      const listenThrob = state === "listening" ? (0.5 + 0.5 * Math.sin(t * 9.0)) * 0.35 : 0;
+      const breathe = 1 + Math.sin(t * 0.8) * 0.04 + audio * 0.5 + listenThrob;
       core.scale.setScalar(breathe);
       glow.scale.setScalar(breathe * (1 + audio * 0.6));
-      (glow.material as THREE.MeshBasicMaterial).opacity = 0.1 + audio * 0.5 + (state === "speaking" ? 0.12 : 0);
-      rayMat.opacity = 0.35 + audio * 0.6 + (state === "listening" ? 0.15 : 0);
-      ray.scale.setScalar(6 + audio * 3 + Math.sin(t * 0.5) * 0.3);
-      ray.material.color.set(state === "thinking" ? 0x66ccff : 0xffbb55);
+      (glow.material as THREE.MeshBasicMaterial).opacity = 0.1 + audio * 0.5 + (state === "speaking" ? 0.12 : 0) + listenThrob;
+      rayMat.opacity = 0.35 + audio * 0.6 + (state === "listening" ? 0.25 + 0.2*Math.sin(t*9.0) : 0) + (state === "thinking" ? 0.1 : 0);
+      ray.scale.setScalar(6 + audio * 3 + Math.sin(t * 0.5) * 0.3 + listenThrob * 2);
+      ray.material.color.set(state === "thinking" ? 0x66ccff : state === "listening" ? 0xffdd88 : 0xffbb55);
 
       // counter-rotate the depth shell for volumetric feel
       shell.rotation.y -= 0.0009;
