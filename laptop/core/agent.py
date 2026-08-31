@@ -29,12 +29,14 @@ def _check_kill() -> None:
 
 class Agent:
     def __init__(self, model_side: str = "main",
-                 on_reply: Optional[Callable[[str], None]] = None):
+                 on_reply: Optional[Callable[[str], None]] = None,
+                 on_step: Optional[Callable[[int, str, bool], None]] = None):
         self.llm = BrainClient(model=CFG.model_for(model_side))
         self.android = AndroidControl()
         self.max_steps = CFG.max_step_hard_cap
         self._prompt_fn = None
         self.on_reply = on_reply  # callback(text) -> e.g. trigger TTS on HUD
+        self.on_step = on_step    # callback(step, desc, ok) -> live HUD progress
 
     def ask_steps(self, goal: str) -> int:
         """Q21: always prompt the user for number of steps before a task."""
@@ -92,9 +94,12 @@ class Agent:
                     f"'search cats'). Reply as a JSON list of strings.")
                 import json as _j
                 try:
-                    plan_steps = _j.loads(p.get("args", {}).get("text", "[]")) if isinstance(p, dict) else []
+                    _raw = p.get("args", {}).get("text", "[]") if isinstance(p, dict) else "[]"
+                    plan_steps = _j.loads(_raw)
                 except Exception:
                     plan_steps = []
+                if not isinstance(plan_steps, list):
+                    plan_steps = [str(plan_steps)] if plan_steps else []
                 if isinstance(plan_steps, list) and plan_steps:
                     transcript("Plan: " + " -> ".join(str(s) for s in plan_steps), who="ultron")
             except Exception as e:
@@ -131,6 +136,8 @@ class Agent:
             log("agent", {"event": "step-done", "tool": tool, "ok": ok, "res": res})
             results.append({"step": i, "tool": tool, "res": res})
             history.append(f"step {i}: {tool} -> {'ok' if ok else 'FAILED ' + str(res.get('reason', ''))}")
+            if self.on_step:
+                self.on_step(i, f"{tool}: {'ok' if ok else 'failed'}", ok)
 
             # self-correction: find failed -> launch app then re-find
             if tool == "adb" and not ok and "not-found" in str(res.get("reason", "")):

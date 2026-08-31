@@ -61,16 +61,33 @@ class FakeAndroid:
         self.calls.append(("key", c)); return {"ok": True}
     def launch(self, p):
         self.calls.append(("launch", p)); return {"ok": True}
+    def dump_ui(self):
+        # fake UI tree (mode C perception). Real AndroidControl.dump_ui returns
+        # an XML Element; here we return an empty-ish tree so perception yields
+        # no items (the test drives actions via the scripted LLM, not the dump).
+        import xml.etree.ElementTree as ET
+        return ET.fromstring('<hierarchy><node text="YouTube"/></hierarchy>')
     def _adb(self, *a):
         class R: returncode = 0
         return R()
 
 
 # ---- Fake LLM that plays a script ----
+# ask_steps() and _decide() share one chat() call. The real LLM returns a number
+# for the step-count prompt and action dicts for decide prompts; mimic that:
+# return "3" when the prompt is asking for a step count, otherwise pop SCRIPT.
 SCRIPT = [
     {"tool": "adb", "args": {"cmd": 'find "YouTube"'}},
     {"tool": "reply", "args": {"text": "Opened YouTube for you."}},
 ]
+
+
+def _fake_chat(text):
+    low = text.lower()
+    # ask_steps / plan prompts ask for a count or a step list; return a number
+    if "break this into" in low or "ordered list" in low:
+        return {"args": {"text": "3"}}
+    return SCRIPT.pop(0) if SCRIPT else {"tool": "reply", "args": {"text": "done"}}
 
 
 class TestAgentE2E(unittest.TestCase):
@@ -81,7 +98,7 @@ class TestAgentE2E(unittest.TestCase):
         a.android = fake
         # patch the LLM with our scripted responder
         a.llm = types.SimpleNamespace(
-            chat=lambda text: SCRIPT.pop(0) if SCRIPT else {"tool": "reply", "args": {"text": "done"}},
+            chat=_fake_chat,
             history=[],
         )
         # give a high step cap but the loop should stop at 'reply'
