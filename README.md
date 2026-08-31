@@ -28,6 +28,11 @@ fallback, never a requirement.
   cloud/custom endpoint (OpenRouter, TokenRouter, xKiro, OpenCode, OpenAI).
 - 🗣️ **Speech in/out** — browser mic + Web Speech on laptop; Vosk (Hin+Eng) +
   Piper on phone.
+- 🎙️ **Offline voice activation (laptop)** — the brain owns the laptop mic directly
+  (no browser permission click) and listens continuously for the wake word
+  **"ultron"**, then captures your command. The orb throbs/pulses on *listening*
+  and reacts on *thinking*/*speaking* — true Iron-Man-style, fully offline
+  (Vosk + `sounddevice`). See `STEP_BY_STEP.md` Part 2.
 - ✋ **Gesture-reactive orb** — premium audio/gesture-reactive orb on laptop,
   phone-web, and the standalone APK.
 - 🤖 **Hermes-style tools** — shell, file read/write, web fetch, and ADB device

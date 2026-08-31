@@ -40,6 +40,12 @@ class Core:
         self.loop = None
         self.wake = True
         self.busy = False
+        # native laptop microphone voice activation (offline, no browser needed)
+        try:
+            from stt_tts import VoiceListener
+            self.voice = VoiceListener(wake_phrase="ultron", lang="en")
+        except Exception:
+            self.voice = None
 
     # ---- HUD websocket (orb frontend) ----
     async def hud_handler(self, ws):
@@ -89,6 +95,31 @@ class Core:
         except Exception as e:  # noqa
             log("core", {"event": "goal-error", "err": str(e)})
             transcript(f"Error: {e}", who="ultron")
+
+    def start_voice(self):
+        """Launch native laptop-mic voice activation (offline wake word)."""
+        if not self.voice:
+            log("core", {"event": "voice", "status": "unavailable"})
+            return
+        if not self.voice.available:
+            log("core", {"event": "voice", "status": "vosk-missing"})
+            return
+        self.voice.start(on_command=self._on_voice_command,
+                         on_state=self._on_voice_state)
+        log("core", {"event": "voice", "status": "started"})
+
+    def _on_voice_state(self, state: str):
+        # drive the HUD orb animation from native voice events
+        if state in ("wake", "listening", "thinking"):
+            asyncio.run_coroutine_threadsafe(
+                self._send_hud({"type": "state", "state": state}), self.loop)
+        elif state.startswith("mic-"):
+            log("core", {"event": "voice-mic", "detail": state})
+
+    def _on_voice_command(self, text: str):
+        # called from the voice thread -> run as a goal on the event loop
+        if self.loop:
+            asyncio.run_coroutine_threadsafe(self._handle_goal(text), self.loop)
 
     def _on_reply(self, text: str):
         # TTS is handled in the browser; core just signals it + animates the orb
@@ -140,6 +171,8 @@ class Core:
 
     async def serve_hud(self):
         self.loop = asyncio.get_event_loop()
+        # start native laptop-mic voice activation (offline "ultron" wake word)
+        self.start_voice()
         async with websockets.serve(self.hud_handler, "127.0.0.1", 8766):
             log("core", {"event": "hud-ws", "port": 8766})
             await asyncio.Future()

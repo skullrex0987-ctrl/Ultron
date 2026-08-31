@@ -16,7 +16,100 @@ from typing import Optional, Callable
 from config import CFG
 
 
-class VoskSTT:
+class VoiceListener:
+    """Continuous, offline voice activation for the laptop (no browser needed).
+
+    Owns the laptop microphone directly via sounddevice, runs a two-phase loop:
+      1) WAKE  — listen for the wake phrase ("ultron" / "hey ultron")
+      2) COMMAND — once awakened, capture the command until speech ends (VAD)
+      3) callback(on_command=text) and on_state("wake"|"listening"|"thinking")
+
+    Fully offline (Vosk partial results detect the wake word). The HUD orb already
+    animates on state changes, so this drives the "voice detection" animation.
+    """
+
+    def __init__(self, wake_phrase: str = "ultron", lang: str = "en"):
+        self.wake = wake_phrase.lower()
+        self.lang = lang
+        self._thread = None
+        self._stop = False
+        self.available = self._vosk_ok()
+
+    def _vosk_ok(self) -> bool:
+        try:
+            from vosk import Model, KaldiRecognizer  # type: ignore
+            self.Model = Model
+            self.Kaldi = KaldiRecognizer
+            return True
+        except Exception:
+            return False
+
+    def _model_path(self, lang: str) -> str:
+        from config import CFG
+        name = CFG.hin_model if lang == "hi" else CFG.en_model
+        return os.path.join(CFG.vosk_model_dir, name)
+
+    def run(self, on_command: Callable[[str], None],
+            on_state: Callable[[str], None],
+            stop: Callable[[], bool] = lambda: False):
+        """Blocking loop. Call from a thread. on_state: 'wake'|'listening'|'thinking'."""
+        import numpy as np  # type: ignore
+        try:
+            import sounddevice as sd  # type: ignore
+        except Exception:
+            on_state("mic-unavailable")
+            return
+        if not self.available:
+            on_state("vosk-unavailable")
+            return
+
+        rec = self.Kaldi(self.Model(self._model_path(self.lang)), 16000)
+        rec.SetWords(False)
+        on_state("idle")
+
+        def cb(indata, frames, t, status):
+            rec.AcceptWaveform(bytes(indata))
+
+        try:
+            with sd.RawInputStream(samplerate=16000, blocksize=8000,
+                                   dtype="int16", channels=1, callback=cb):
+                phase = "wake"
+                on_state("wake")
+                while not self._stop and not stop():
+                    if rec.AcceptWaveform(b""):  # force a result flush
+                        pass
+                    partial = rec.PartialResult()
+                    text = json.loads(partial).get("text", "").lower()
+                    if phase == "wake":
+                        if self.wake in text or ("hey" in text and "ultron" in text):
+                            on_state("listening")
+                            phase = "command"
+                            # reset recognizer to drop the wake word from transcript
+                            rec = self.Kaldi(self.Model(self._model_path(self.lang)), 16000)
+                            rec.SetWords(False)
+                    else:  # command phase: capture until a final result arrives
+                        if rec.AcceptWaveform(b""):
+                            final = json.loads(rec.FinalResult()).get("text", "").strip()
+                            if final:
+                                on_state("thinking")
+                                on_command(final)
+                                on_state("wake")
+                                phase = "wake"
+                                rec = self.Kaldi(self.Model(self._model_path(self.lang)), 16000)
+                                rec.SetWords(False)
+        except Exception as e:
+            on_state("mic-error:" + str(e)[:60])
+
+    def start(self, on_command, on_state, stop=lambda: False):
+        import threading
+        self._stop = False
+        self._thread = threading.Thread(target=self.run, args=(on_command, on_state, stop),
+                                        daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._stop = True
+
     def __init__(self, lang: str = "en"):
         self.lang = lang
         try:
