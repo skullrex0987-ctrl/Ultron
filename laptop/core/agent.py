@@ -55,15 +55,20 @@ class Agent:
     def set_prompt(self, fn: Callable[[str], str]) -> None:
         self._prompt_fn = fn
 
-    def _decide(self, goal: str, step: int, steps: int, scene: dict) -> dict:
+    def _decide(self, goal: str, step: int, steps: int, scene: dict, history: list[str]) -> dict:
+        hist = "\n".join(f"  - {h}" for h in history[-6:]) or "  (none yet)"
         ctx = (
             f"Goal: {goal}\n"
             f"Step {step+1}/{steps}\n"
             f"Current screen/context: {scene}\n"
+            f"What you already tried this task (do NOT repeat a failed action):\n{hist}\n"
             "Decide the SINGLE next tool call to make progress. "
             "If the goal is fully achieved, respond with tool 'reply' summarizing. "
-            "If you need the phone unlocked first and it's locked, use adb 'keyevent 82' then 'swipe'. "
-            "Prefer adb 'find \"<text>\"' to tap visible UI by name."
+            "If the phone looks locked (no app elements / keyguard), use adb "
+            "'keyevent 82' then 'swipe 540 1800 540 900' to unlock. "
+            "To tap a visible UI element by name, prefer adb 'find \"<text>\"'. "
+            "If a find failed, try launching the app by name with adb 'launch <app>' "
+            "then 'find' again. Keep each step small and verifiable."
         )
         return self.llm.chat(ctx)
 
@@ -75,11 +80,21 @@ class Agent:
 
         self.android.connect()
         results = []
+        history: list[str] = []
+        unlocked = False
+
         for i in range(steps):
             _check_kill()
             scene = perceive(self.android, perception_mode)
+            # unlock pre-step: keyguard detected (empty screen, not yet unlocked)
+            if not unlocked and (not scene.get("items") and perception_mode == "C"):
+                self.android._adb("shell", "input", "keyevent", "82")
+                self.android._adb("shell", "input", "swipe", "540", "1800", "540", "900")
+                unlocked = True
+                history.append("unlocked screen (keyevent 82 + swipe)")
+                continue
             try:
-                call = self._decide(goal, i, steps, scene)
+                call = self._decide(goal, i, steps, scene, history)
             except Exception as e:  # noqa
                 log("agent", {"event": "llm-error", "err": str(e)})
                 results.append({"step": i, "error": str(e)})
@@ -94,12 +109,27 @@ class Agent:
                 results.append({"step": i, "reply": text})
                 break
 
-            # route through tools; adb needs the android handle
             res = dispatch(call, android=self.android)
             ok = res.get("ok", False)
-            log("agent", {"event": "step-done", "tool": tool,
-                          "ok": ok, "res": res})
+            log("agent", {"event": "step-done", "tool": tool, "ok": ok, "res": res})
             results.append({"step": i, "tool": tool, "res": res})
+            history.append(f"step {i}: {tool} -> {'ok' if ok else 'FAILED ' + str(res.get('reason',''))}")
+
+            # self-correction: if adb 'find' failed, try launching the app then re-find
+            if tool == "adb" and not ok and "not-found" in str(res.get("reason", "")):
+                # guess the app name from the goal (first known app keyword)
+                app = next((k for k in CFG.app_launch if k in goal.lower()), None)
+                if app:
+                    self.android.launch(app)
+                    history.append(f"launched {app} after find failed")
+                    re = dispatch({"tool": "adb", "args": {"cmd": call["args"]["cmd"]}},
+                                  android=self.android)
+                    ok = re.get("ok", False)
+                    results.append({"step": i, "retry": "launch+" + app, "res": re})
+                    history.append(f"retry find after launch {app} -> {'ok' if ok else 'still FAILED'}")
+                    if ok:
+                        continue
+                transcript(f"Could not find UI element: {res.get('reason')}", who="ultron")
 
             # verify: after a UI action, confirm the expected element is present
             if tool == "adb":
@@ -108,9 +138,6 @@ class Agent:
                     target = cmd.split('"')[1] if '"' in cmd else ""
                     if target and not self.android.reached(target):
                         log("agent", {"event": "verify-failed", "target": target})
-                        transcript(f"Tapped '{target}' but it's not confirmed on screen.", who="ultron")
-                if "not-found" in str(res.get("reason", "")):
-                    transcript(f"Could not find UI element: {res.get('reason')}", who="ultron")
 
         transcript("Task complete.", who="ultron")
         return {"goal": goal, "steps_run": len(results), "results": results}
