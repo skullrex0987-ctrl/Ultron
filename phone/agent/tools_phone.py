@@ -1,11 +1,69 @@
 """Phone Hermes-style tools (same capabilities as laptop)."""
 from __future__ import annotations
 import os
+import re as _re
+import html as _html
 import subprocess
 import urllib.request
+import urllib.parse as _uparse
 from typing import Optional
 
 from config_phone import CFG
+
+# ---- structured output formatting (mirror of laptop tools.format_reply) ----
+_THINK_RE = _re.compile(r"<think>.*?</think>", _re.DOTALL | _re.IGNORECASE)
+_TAG_RE = _re.compile(r"</?(?:think|thinking|scratchpad|system|tool_call|reasoning)>",
+                      _re.IGNORECASE)
+_BRACKET_RE = _re.compile(r"^\s*\[(?:system|assistant|user|internal|thinking)\]\s*:?\s*",
+                          _re.IGNORECASE)
+_BULLET_RE = _re.compile(r"^(\s*)([*\u2022\u2013\u2014+])\s+")
+_BLANKS_RE = _re.compile(r"\n{3,}")
+
+
+def format_reply(text) -> str:
+    """Tidy a model reply into clean Markdown-ish output (pure string fn)."""
+    if text is None:
+        return ""
+    if not isinstance(text, str):
+        text = str(text)
+    t = _THINK_RE.sub("", text)
+    t = _TAG_RE.sub("", t)
+    t = t.replace("\r\n", "\n").replace("\r", "\n")
+    out = []
+    for line in t.split("\n"):
+        line = _BRACKET_RE.sub("", line)
+        if line.strip():
+            line = _BULLET_RE.sub(r"\1- ", line).rstrip()
+        else:
+            line = ""
+        out.append(line)
+    return _BLANKS_RE.sub("\n\n", "\n".join(out)).strip()
+
+
+def _strip_html(raw: str) -> str:
+    s = _re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", raw or "")
+    s = _re.sub(r"(?s)<[^>]+>", " ", s)
+    s = _html.unescape(s)
+    return _re.sub(r"[ \t\u00a0]+", " ", s).strip()
+
+
+def _ddg_links(html_text: str, limit: int = 4) -> list:
+    urls = []
+    for m in _re.finditer(r'href="(/l/\?[^"]*uddg=[^"&]+|https?://[^"]+)"', html_text or ""):
+        h = _html.unescape(m.group(1))
+        if "uddg=" in h:
+            q = _uparse.parse_qs(_uparse.urlparse(h).query).get("uddg")
+            if q:
+                h = q[0]
+        if not h.startswith("http"):
+            continue
+        if any(d in h for d in ("duckduckgo.com", "google.com/search", "bing.com")):
+            continue
+        if h not in urls:
+            urls.append(h)
+        if len(urls) >= limit:
+            break
+    return urls
 
 
 def shell(cmd: str, confirm=None) -> dict:
@@ -43,6 +101,41 @@ def web_fetch(url: str) -> dict:
             return {"ok": True, "content": r.read(200000).decode("utf-8", "replace")[:20000]}
     except Exception as e:  # noqa
         return {"ok": False, "reason": str(e)}
+
+
+def _phone_search_url(q: str) -> str:
+    return "https://html.duckduckgo.com/html/?q=" + _uparse.quote_plus(q)
+
+
+def research(query: str) -> dict:
+    """Phone research mode: search/fetch and return answer + source URLs."""
+    q = (query or "").strip()
+    if not q:
+        return {"ok": False, "reason": "empty-query", "answer": "", "sources": []}
+    sources: list = []
+    chunks: list = []
+    if q.startswith("http://") or q.startswith("https://"):
+        targets = [q]
+        head = f"Fetched {q}"
+    else:
+        url = _phone_search_url(q)
+        r = web_fetch(url)
+        targets = _ddg_links(r.get("content", "")) if r.get("ok") else []
+        head = f"Research: {q}"
+        if r.get("ok"):
+            sources.append(url)
+    for t in targets[:3]:
+        pr = web_fetch(t)
+        if pr.get("ok"):
+            if t not in sources:
+                sources.append(t)
+            txt = _strip_html(pr.get("content", ""))
+            if txt:
+                chunks.append(f"From {t}:\n{txt[:800]}")
+    body = "\n\n".join(chunks) if chunks else "No page content could be retrieved."
+    src_block = "\n".join(f"- {s}" for s in sources) or "- (none)"
+    answer = format_reply(f"{head}\n\n{body}\n\nSources:\n{src_block}")
+    return {"ok": bool(sources), "answer": answer, "sources": sources, "query": q}
 
 
 def adb_self(cmd: str, ctrl=None) -> dict:
@@ -93,6 +186,7 @@ def dispatch(call: dict, ctrl=None) -> dict:
     if n == "file_read": return file_read(a.get("path", ""))
     if n == "file_write": return file_write(a.get("path", ""), a.get("content", ""))
     if n == "web_fetch": return web_fetch(a.get("url", ""))
+    if n == "research": return research(a.get("query", a.get("q", a.get("text", ""))))
     if n == "plan": return {"ok": True, "goal": a.get("goal", ""), "steps": [s.strip() for s in a.get("goal", "").replace(";", ".").split(".") if s.strip()]}
     if n == "adb": return adb_self(a.get("cmd", ""), ctrl)
     if n == "reply": return {"ok": True, "reply": a.get("text", "")}

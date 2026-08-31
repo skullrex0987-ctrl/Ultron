@@ -70,6 +70,117 @@ def web_fetch(url: str) -> dict:
         return {"ok": False, "reason": str(e)}
 
 
+import re as _re
+import html as _html
+import urllib.parse as _uparse
+
+_THINK_RE = _re.compile(r"<think>.*?</think>", _re.DOTALL | _re.IGNORECASE)
+_TAG_RE = _re.compile(r"</?(?:think|thinking|scratchpad|system|tool_call|reasoning)>",
+                      _re.IGNORECASE)
+_BRACKET_RE = _re.compile(r"^\s*\[(?:system|assistant|user|internal|thinking)\]\s*:?\s*",
+                          _re.IGNORECASE)
+_BULLET_RE = _re.compile(r"^(\s*)([*\u2022\u2013\u2014+])\s+")
+_BLANKS_RE = _re.compile(r"\n{3,}")
+
+
+def format_reply(text) -> str:
+    """Pure-string tidy-up of a model reply into clean Markdown-ish output.
+
+    - strips model internal tags (<think>...</think>, [system], stray tags)
+    - collapses 3+ newlines into a single blank line
+    - normalizes bullet markers (*, •, -, +) to '- '
+    - keeps '#' headings and numbered lists as emitted
+    Never raises; always returns a string.
+    """
+    if text is None:
+        return ""
+    if not isinstance(text, str):
+        text = str(text)
+    t = _THINK_RE.sub("", text)
+    t = _TAG_RE.sub("", t)
+    t = t.replace("\r\n", "\n").replace("\r", "\n")
+    out = []
+    for line in t.split("\n"):
+        line = _BRACKET_RE.sub("", line)
+        if line.strip():
+            line = _BULLET_RE.sub(r"\1- ", line)
+            line = line.rstrip()
+        else:
+            line = ""
+        out.append(line)
+    t = "\n".join(out)
+    t = _BLANKS_RE.sub("\n\n", t)
+    return t.strip()
+
+
+def _strip_html(raw: str) -> str:
+    s = _re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", raw or "")
+    s = _re.sub(r"(?s)<[^>]+>", " ", s)
+    s = _html.unescape(s)
+    return _re.sub(r"[ \t\u00a0]+", " ", s).strip()
+
+
+def _ddg_links(html_text: str, limit: int = 4) -> list:
+    urls = []
+    for m in _re.finditer(r'href="(/l/\?[^"]*uddg=[^"&]+|https?://[^"]+)"', html_text or ""):
+        h = _html.unescape(m.group(1))
+        if "uddg=" in h:
+            q = _uparse.parse_qs(_uparse.urlparse(h).query).get("uddg")
+            if q:
+                h = q[0]
+        if not h.startswith("http"):
+            continue
+        if any(d in h for d in ("duckduckgo.com", "google.com/search", "bing.com")):
+            continue
+        if h not in urls:
+            urls.append(h)
+        if len(urls) >= limit:
+            break
+    return urls
+
+
+def research(query: str) -> dict:
+    """Research mode: search/fetch pages and return an answer with citations.
+
+    stdlib only. If `query` looks like a URL it is fetched directly; otherwise
+    the DuckDuckGo HTML endpoint is searched and the top results fetched.
+    Returns {'ok', 'answer', 'sources': [urls]}.
+    """
+    log("tool", {"tool": "research", "query": query})
+    q = (query or "").strip()
+    if not q:
+        return {"ok": False, "reason": "empty-query", "answer": "", "sources": []}
+
+    sources: list = []
+    chunks: list = []
+
+    if q.startswith("http://") or q.startswith("https://"):
+        targets = [q]
+        summary_head = f"Fetched {q}"
+    else:
+        url = "https://html.duckduckgo.com/html/?q=" + _uparse.quote_plus(q)
+        r = web_fetch(url)
+        targets = _ddg_links(r.get("content", "")) if r.get("ok") else []
+        summary_head = f"Research: {q}"
+        if r.get("ok"):
+            sources.append(url)
+
+    for t in targets[:3]:
+        pr = web_fetch(t)
+        if pr.get("ok"):
+            if t not in sources:
+                sources.append(t)
+            txt = _strip_html(pr.get("content", ""))
+            if txt:
+                chunks.append(f"From {t}:\n{txt[:1200]}")
+
+    body = "\n\n".join(chunks) if chunks else "No page content could be retrieved."
+    src_block = "\n".join(f"- {s}" for s in sources) or "- (none)"
+    answer = f"{summary_head}\n\n{body}\n\nSources:\n{src_block}"
+    return {"ok": bool(sources), "answer": format_reply(answer),
+            "sources": sources, "query": q}
+
+
 def plan(goal: str) -> dict:
     """Break a goal into ordered steps (used by the agent before acting)."""
     log("tool", {"tool": "plan", "goal": goal})
@@ -139,6 +250,8 @@ def dispatch(tool_call: dict, confirm: Optional[Callable[[str], bool]] = None,
         return file_write(args.get("path", ""), args.get("content", ""))
     if name == "web_fetch":
         return web_fetch(args.get("url", ""))
+    if name == "research":
+        return research(args.get("query", args.get("q", args.get("text", ""))))
     if name == "plan":
         return plan(args.get("goal", ""))
     if name == "adb":
@@ -154,6 +267,7 @@ TOOL_DOCS = {
     "file_read": "Read a file. args: {path}",
     "file_write": "Write a file. args: {path, content}",
     "web_fetch": "Fetch a URL. args: {url}",
+    "research": "Research a question on the web and return an answer with a Sources list. args: {query}",
     "adb": "Control the linked Android phone. args: {cmd: 'tap X Y' | 'swipe x1 y1 x2 y2' | 'text \"hi\"' | 'keyevent KEY' | 'launch pkg' | 'find \"YouTube\"' | 'home' | 'back' | 'recent'}",
     "plan": "Break a goal into steps. args: {goal}",
     "reply": "Speak to the user. args: {text}",
