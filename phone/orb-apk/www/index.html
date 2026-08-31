@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>U.L.T.R.O.N. — Orb</title>
+<style>
+  :root { --amber:#ffaa30; --hot:#ffcc66; --ice:#66ccff; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; background:#000; overflow:hidden;
+    font-family:'Courier New',monospace; color:var(--amber); -webkit-tap-highlight-color:transparent; }
+  #orb { position:fixed; inset:0; }
+  .hud { position:fixed; z-index:5; text-shadow:0 0 10px rgba(255,170,48,.85);
+    user-select:none; pointer-events:none; letter-spacing:.12em; }
+  .title { top:16px; left:18px; font-size:14px; letter-spacing:.38em; }
+  .title::after { content:""; display:block; margin-top:7px; width:130px; height:1px;
+    background:linear-gradient(to right,var(--amber),transparent); }
+  .status { top:16px; right:18px; font-size:11px; display:flex; align-items:center; gap:8px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#553300; box-shadow:0 0 6px #553300; }
+  .dot.listen { background:var(--hot); box-shadow:0 0 12px var(--hot); }
+  .dot.think  { background:var(--ice); box-shadow:0 0 12px var(--ice); animation:pulse 1s infinite; }
+  .dot.speak  { background:#66ff99; box-shadow:0 0 12px #66ff99; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .gest { top:46px; right:18px; font-size:10px; color:var(--hot); }
+  .tr { position:fixed; left:18px; bottom:84px; max-width:92vw; font-size:11px;
+    line-height:1.5; text-shadow:0 0 8px rgba(255,170,48,.6); z-index:5; pointer-events:none; }
+  .hint { position:fixed; left:18px; bottom:16px; font-size:9px; opacity:.55; z-index:5; pointer-events:none; }
+  .controls { position:fixed; right:16px; bottom:16px; display:flex; gap:8px; z-index:6; }
+  button { background:rgba(20,10,0,.6); border:1px solid var(--amber); color:var(--amber);
+    font-family:inherit; padding:11px 15px; border-radius:6px; font-size:12px; letter-spacing:.08em;
+    backdrop-filter:blur(2px); text-shadow:0 0 6px rgba(255,170,48,.7); cursor:pointer; }
+  button.on { background:rgba(120,60,0,.75); border-color:var(--hot); color:var(--hot); }
+  #cam { position:fixed; right:14px; bottom:70px; width:170px; height:128px; z-index:6;
+    border:1px solid rgba(255,170,48,.4); border-radius:8px; object-fit:cover; transform:scaleX(-1);
+    filter:sepia(1) hue-rotate(-15deg) saturate(2.2) brightness(.8); display:none; }
+  #ovl { position:fixed; right:14px; bottom:70px; width:170px; height:128px; z-index:7; display:none; pointer-events:none; }
+  .grain { position:fixed; inset:0; z-index:8; pointer-events:none; opacity:.06; mix-blend-mode:screen;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .scan { position:fixed; inset:0; z-index:9; pointer-events:none; opacity:.22;
+    background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.25) 2px,rgba(0,0,0,.25) 4px); }
+  .vig { position:fixed; inset:0; z-index:7; pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 38%,rgba(0,0,0,.72)); }
+</style>
+</head>
+<body>
+  <div id="orb"></div>
+  <div class="grain"></div><div class="scan"></div><div class="vig"></div>
+  <div class="hud title">U.L.T.R.O.N. ORB</div>
+  <div class="hud status"><span id="dot" class="dot"></span><span id="st">IDLE</span></div>
+  <div class="hud gest" id="gst">GESTURE: —</div>
+  <div class="tr" id="tr"></div>
+  <div class="hint">PINCH talk · OPEN-PALM listen · PEACE shot · THUMBS vol · SWIPE nav · 2-HAND zoom</div>
+  <video id="cam" playsinline muted></video>
+  <canvas id="ovl" width="170" height="128"></canvas>
+  <div class="controls">
+    <button id="g">GESTURES</button>
+    <button id="t">TALK</button>
+    <button id="w">WAKE</button>
+  </div>
+
+<script type="module">
+import * as THREE from "https://esm.sh/three@0.160";
+import { HandLandmarker, FilesetResolver } from "https://esm.sh/@mediapipe/tasks-vision@0.10.35";
+
+/* ---------- PREMIUM ORB ---------- */
+const C = { amber:0xffaa30, hot:0xffcc66, ice:0x66ccff, mid:0xdd7700 };
+const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,500);
+cam.position.set(0,0.4,5.5);
+const ren=new THREE.WebGLRenderer({antialias:true}); ren.setSize(innerWidth,innerHeight);
+ren.setPixelRatio(Math.min(devicePixelRatio,2));
+ren.toneMapping=THREE.ACESFilmicToneMapping; ren.toneMappingExposure=0.9;
+document.getElementById('orb').appendChild(ren.domElement);
+
+// post-processing (bloom + chromatic)
+const {EffectComposer}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/EffectComposer.js");
+const {RenderPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/RenderPass.js");
+const {UnrealBloomPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/UnrealBloomPass.js");
+const {ShaderPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/ShaderPass.js");
+const composer=new EffectComposer(ren); composer.addPass(new RenderPass(scene,cam));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.9,0.5,0.18); composer.addPass(bloom);
+const chrom=new ShaderPass({uniforms:{tDiffuse:{value:null},uTime:{value:0}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform sampler2D tDiffuse;uniform float uTime;varying vec2 vUv;
+   void main(){vec2 d=vUv-0.5;float o=0.0035*length(d);
+   vec4 cr=texture2D(tDiffuse,vUv+d*o);vec4 cg=texture2D(tDiffuse,vUv);vec4 cb=texture2D(tDiffuse,vUv-d*o*0.5);
+   gl_FragColor=vec4(cr.r,cg.g*1.05,cb.b*0.6,1.0);
+   gl_FragColor.rgb=mix(gl_FragColor.rgb,gl_FragColor.rgb*vec3(1.15,0.85,0.55),0.3);}`});
+composer.addPass(chrom);
+
+const grp=new THREE.Group(); scene.add(grp);
+const lineMat=(c,o=1)=>new THREE.LineBasicMaterial({color:c,transparent:true,opacity:o,blending:THREE.AdditiveBlending,depthWrite:false});
+function ring(r,lat,seg=120){const p=[];for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;p.push(new THREE.Vector3(r*Math.cos(lat)*Math.cos(a),r*Math.sin(lat),r*Math.cos(lat)*Math.sin(a)));}return new THREE.BufferGeometry().setFromPoints(p);}
+function merid(r,lon,seg=120){const p=[];for(let i=0;i<=seg;i++){const lat=i/seg*Math.PI-Math.PI/2;p.push(new THREE.Vector3(r*Math.cos(lat)*Math.cos(lon),r*Math.sin(lat),r*Math.cos(lat)*Math.sin(lon)));}return new THREE.BufferGeometry().setFromPoints(p);}
+
+// wireframe shells
+const R1=2.0, shell=new THREE.Group(); grp.add(shell);
+for(let i=-15;i<=15;i++){const lat=i/15*Math.PI/2*0.95; shell.add(new THREE.Line(ring(R1,lat),lineMat(i%3?C.amber*0+0x553300:C.mid,i%3?0.12:0.5)));}
+for(let i=0;i<24;i++){const lon=i/24*Math.PI*2; shell.add(new THREE.Line(merid(R1,lon),lineMat(i%6?0x553300:C.mid,i%6?0.1:0.6)));}
+const eq=new THREE.Group();
+for(let j=0;j<22;j++){const t=j/21*2-1; eq.add(new THREE.Line(ring(R1,t*0.4/2,200),lineMat(Math.abs(t)<0.3?C.hot:C.mid,0.8*(1-Math.abs(t)*0.65))));}
+shell.add(eq);
+// inner spiral core
+const core=new THREE.Group(); grp.add(core); const R3=0.9;
+for(let s=0;s<10;s++){const p=[];const turns=3+Math.random()*2,seg=300,ph=s/10*Math.PI*2;
+  for(let i=0;i<=seg;i++){const t=i/seg,lat=t*Math.PI-Math.PI/2,lon=t*turns*Math.PI*2+ph;
+    p.push(new THREE.Vector3(R3*Math.cos(lat)*Math.cos(lon),R3*Math.sin(lat),R3*Math.cos(lat)*Math.sin(lon)));}
+  core.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),lineMat(C.hot,0.3+Math.random()*0.2)));}
+
+// PREMIUM energy core (fresnel shader)
+const cu={uTime:{value:0},uLevel:{value:0},uColorA:{value:new THREE.Color(C.hot)},uColorB:{value:new THREE.Color(C.ice)}};
+const coreMesh=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,4),new THREE.ShaderMaterial({
+  uniforms:cu,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
+  vertexShader:`varying vec3 vN;varying vec3 vP;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vP=mv.xyz;gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float uTime;uniform float uLevel;uniform vec3 uColorA;uniform vec3 uColorB;varying vec3 vN;varying vec3 vP;
+   void main(){float fres=pow(1.0-abs(dot(normalize(vN),normalize(-vP))),2.0);
+   float pulse=0.5+0.5*sin(uTime*3.0)+uLevel*1.5;vec3 col=mix(uColorA,uColorB,fres);
+   gl_FragColor=vec4(col*pulse,fres*0.9+uLevel*0.4+0.08);}`}));
+grp.add(coreMesh);
+// glow + god-ray sprite
+const glow=new THREE.Mesh(new THREE.SphereGeometry(0.65,32,32),new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:0.12,blending:THREE.AdditiveBlending,depthWrite:false})); grp.add(glow);
+const rtex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(0.2,'rgba(255,220,150,0.7)');g.addColorStop(0.5,'rgba(255,160,60,0.25)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
+const ray=new THREE.Sprite(new THREE.SpriteMaterial({map:rtex,color:C.hot,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0.5})); ray.scale.set(6.5,6.5,1); grp.add(ray);
+// nebula
+const N=1500,pp=new Float32Array(N*3),cc=new Float32Array(N*3),ca=new THREE.Color(C.amber),cb=new THREE.Color(C.ice);
+for(let i=0;i<N;i++){const r=1.3+Math.random()*4.6,th=Math.random()*6.28,ph=Math.acos(2*Math.random()-1);
+  pp[i*3]=r*Math.sin(ph)*Math.cos(th);pp[i*3+1]=r*Math.cos(ph)*0.7;pp[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+  const col=ca.clone().lerp(cb,Math.random());cc[i*3]=col.r;cc[i*3+1]=col.g;cc[i*3+2]=col.b;}
+const ng=new THREE.BufferGeometry();ng.setAttribute('position',new THREE.BufferAttribute(pp,3));ng.setAttribute('color',new THREE.BufferAttribute(cc,3));
+const neb=new THREE.Points(ng,new THREE.PointsMaterial({size:0.055,vertexColors:true,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false,map:rtex}));grp.add(neb);
+// scan ring
+const sr=new THREE.Mesh(new THREE.RingGeometry(R1-0.01,R1+0.01,120),new THREE.MeshBasicMaterial({color:C.hot,transparent:true,opacity:0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false})); sr.rotation.x=Math.PI/2; grp.add(sr);
+
+let audio=0,target=0,state="idle"; const clock=new THREE.Clock();
+function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
+  shell.rotation.y+=0.0015;shell.rotation.x=Math.sin(t*0.08)*0.05;
+  core.rotation.y-=0.005;core.rotation.z+=0.002;
+  audio=THREE.MathUtils.lerp(audio,target,0.25);
+  cu.uTime.value=t; cu.uLevel.value=audio+(state==='think'?0.25*(0.5+0.5*Math.sin(t*6)):0);
+  const breathe=1+Math.sin(t*0.8)*0.04+audio*0.5;
+  coreMesh.scale.setScalar(breathe); glow.scale.setScalar(breathe*(1+audio*0.6));
+  glow.material.opacity=0.1+audio*0.35+(state==='speak'?0.1:0);
+  ray.material.opacity=0.35+audio*0.5+(state==='listen'?0.15:0); ray.scale.setScalar(6.5+audio*3+Math.sin(t*0.5)*0.3);
+  ray.material.color.set(state==='think'?C.ice:C.hot);
+  neb.rotation.y+=0.0006; neb.rotation.x=Math.sin(t*0.1)*0.2;
+  const sy=Math.sin(t*0.4)*R1; sr.position.y=sy; const ss=Math.sqrt(Math.max(0,R1*R1-sy*sy))/R1;
+  sr.scale.set(ss,ss,1); sr.material.opacity=0.2*ss;
+  bloom.strength=1.7+Math.sin(t*0.8)*0.3+(state==='speak'?audio*1.4:0);
+  chrom.uniforms.uTime.value=t; composer.render();}
+animate();
+
+/* ---------- GESTURES ---------- */
+let lm=null,on=false,prev=false; const video=document.getElementById('cam'),ovl=document.getElementById('ovl'),octx=ovl.getContext('2d');
+async function startG(){const fs=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm");
+  lm=await HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2});
+  const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});video.srcObject=s;await video.play();video.style.display="block";ovl.style.display="block";on=true;loop();}
+let last=0; function loop(){if(!on)return;requestAnimationFrame(loop);if(!lm||video.readyState<2||video.currentTime===last)return;last=video.currentTime;
+  const r=lm.detectForVideo(video,performance.now());classify(r.landmarks);}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function classify(ls){octx.clearRect(0,0,ovl.width,ovl.height);const hands=ls||[];const pinches=[];
+  hands.forEach(L=>{const pinch=dist(L[4],L[8])/Math.max(1e-6,dist(L[0],L[9]));if(pinch<0.35)pinches.push(1);
+    octx.strokeStyle="#ffcc66";octx.lineWidth=2;octx.beginPath();octx.moveTo((1-L[4].x)*ovl.width,L[4].y*ovl.height);octx.lineTo((1-L[8].x)*ovl.width,L[8].y*ovl.height);octx.stroke();});
+  let act=null,name="—"; if(pinches.length>=2){act="zoom";name="2-HAND ZOOM";}else if(pinches.length===1){if(!prev)act="talk";name="PINCH";}
+  if(hands.length===0)prev=false;else prev=pinches.length>0;
+  document.getElementById('gst').textContent="GESTURE: "+name; if(act)send({type:act});}
+
+/* ---------- STATE/WS ---------- */
+let ws; function connect(){try{ws=new WebSocket(`ws://${location.hostname}:8081`);
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type==='audio')target=m.level;
+    if(m.type==='state'){state=m.state;document.getElementById('st').textContent=m.state.toUpperCase();
+      const d=document.getElementById('dot');d.className='dot'+(m.state==='idle'?'':' '+m.state);}
+    if(m.type==='transcript'){const t=document.getElementById('tr');t.innerHTML+=`<div>${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;}};
+  ws.onclose=()=>{setTimeout(connect,2000);}; // auto-reconnect if agent restarts
+  ws.onerror=()=>{try{ws.close();}catch(e){}};}catch(e){setTimeout(connect,2000);}}
+connect(); function send(m){if(ws&&ws.readyState===1)ws.send(JSON.stringify(m));}
+document.getElementById('t').onclick=()=>{send({type:'talk'});state='listen';};
+document.getElementById('w').onclick=function(){const w=!this.classList.contains('on');this.classList.toggle('on');send({type:'wake',on:w});};
+document.getElementById('g').onclick=async function(){if(on){on=false;this.classList.remove('on');video.style.display='none';ovl.style.display='none';}else{this.classList.add('on');try{await startG();}catch(e){document.getElementById('gst').textContent='CAMERA DENIED';}}};
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
+</script>
+</body>
+</html>

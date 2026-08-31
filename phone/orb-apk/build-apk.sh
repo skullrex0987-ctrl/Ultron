@@ -8,8 +8,8 @@ cd "$(dirname "$0")"
 echo "[1/6] npm install (orb web assets)"
 npm install --no-audit --no-fund
 
-echo "[2/6] add android platform (skip if already added)"
-npx cap add android 2>/dev/null || echo "   android platform already present"
+echo "[2/6] sync android platform (add only if missing)"
+if [ ! -d android ]; then npx cap add android 2>/dev/null || echo "   android platform already present"; fi
 
 echo "[3/6] sync ULTRON Orb logo into mipmaps"
 bash android_res/sync_icons.sh
