@@ -113,9 +113,20 @@ const coreMesh=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,4),new THREE.Sha
   vertexShader:`varying vec3 vN;varying vec3 vP;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vP=mv.xyz;gl_Position=projectionMatrix*mv;}`,
   fragmentShader:`uniform float uTime;uniform float uLevel;uniform vec3 uColorA;uniform vec3 uColorB;varying vec3 vN;varying vec3 vP;
    void main(){float fres=pow(1.0-abs(dot(normalize(vN),normalize(-vP))),2.0);
-   float pulse=0.5+0.5*sin(uTime*3.0)+uLevel*1.5;vec3 col=mix(uColorA,uColorB,fres);
-   gl_FragColor=vec4(col*pulse,fres*0.9+uLevel*0.4+0.08);}`}));
+   float ripple = sin(vP.y*18.0 + uTime*12.0)*uLevel*0.35;
+   float pulse=0.5+0.5*sin(uTime*3.0)+uLevel*1.5+ripple;vec3 col=mix(uColorA,uColorB,fres);
+   gl_FragColor=vec4(col*pulse,fres*0.9+uLevel*0.4+0.08+ripple*0.5);}`}));
 grp.add(coreMesh);
+// OUTER DEPTH SHELL (inverted-fresnel, bright center -> transparent rim, counter-rotating)
+const shellU={uTime:{value:0},uColor:{value:new THREE.Color(C.ice)}};
+const depthShell=new THREE.Mesh(new THREE.IcosahedronGeometry(0.7,3),new THREE.ShaderMaterial({
+  uniforms:shellU,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
+  vertexShader:`varying vec3 vN;varying vec3 vP;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vP=mv.xyz;gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float uTime;uniform vec3 uColor;varying vec3 vN;varying vec3 vP;
+   void main(){float fres=pow(1.0-abs(dot(normalize(vN),normalize(-vP))),2.0);
+   float inv=1.0-fres; float pulse=0.55+0.45*sin(uTime*2.0);
+   gl_FragColor=vec4(uColor*inv*1.6*pulse,inv*0.5+0.04);}`}));
+grp.add(depthShell);
 // glow + god-ray sprite
 const glow=new THREE.Mesh(new THREE.SphereGeometry(0.65,32,32),new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:0.12,blending:THREE.AdditiveBlending,depthWrite:false})); grp.add(glow);
 const rtex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(0.2,'rgba(255,220,150,0.7)');g.addColorStop(0.5,'rgba(255,160,60,0.25)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
@@ -129,13 +140,22 @@ const ng=new THREE.BufferGeometry();ng.setAttribute('position',new THREE.BufferA
 const neb=new THREE.Points(ng,new THREE.PointsMaterial({size:0.055,vertexColors:true,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false,map:rtex}));grp.add(neb);
 // scan ring
 const sr=new THREE.Mesh(new THREE.RingGeometry(R1-0.01,R1+0.01,120),new THREE.MeshBasicMaterial({color:C.hot,transparent:true,opacity:0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false})); sr.rotation.x=Math.PI/2; grp.add(sr);
+// SPEAKING WAVEFORM RING
+const wgeo=new THREE.RingGeometry(1.0,1.03,180,1); const wbase=wgeo.attributes.position.array.slice();
+const wmat=new THREE.MeshBasicMaterial({color:0x66ff99,transparent:true,opacity:0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false});
+const wring=new THREE.Mesh(wgeo,wmat); grp.add(wring);
 
 let audio=0,target=0,state="idle"; const clock=new THREE.Clock();
+function colForState(s){return new THREE.Color(s==='listen'?C.hot:s==='think'?C.ice:s==='speak'?0x66ff99:C.amber);}
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
   shell.rotation.y+=0.0015;shell.rotation.x=Math.sin(t*0.08)*0.05;
   core.rotation.y-=0.005;core.rotation.z+=0.002;
+  depthShell.rotation.y-=0.0009;depthShell.rotation.x+=0.0004;
   audio=THREE.MathUtils.lerp(audio,target,0.25);
   cu.uTime.value=t; cu.uLevel.value=audio+(state==='think'?0.25*(0.5+0.5*Math.sin(t*6)):0);
+  shellU.uTime.value=t;
+  const sc=colForState(state); neb.material.color.lerp(sc,0.06); shellU.uColor.value.lerp(sc,0.06);
+  if(state==='speak'){const wp=wgeo.attributes.position.array;for(let i=0;i<wp.length;i+=3){const a=Math.atan2(wbase[i+1],wbase[i]);const off=1+audio*0.35*Math.sin(a*16.0+t*14.0);wp[i]=wbase[i]*off;wp[i+1]=wbase[i+1]*off;}wgeo.attributes.position.needsUpdate=true;wmat.opacity=0.45+audio*0.55;wring.rotation.z+=0.01;}else{wmat.opacity=Math.max(0,wmat.opacity-0.06);}
   const breathe=1+Math.sin(t*0.8)*0.04+audio*0.5;
   coreMesh.scale.setScalar(breathe); glow.scale.setScalar(breathe*(1+audio*0.6));
   glow.material.opacity=0.1+audio*0.35+(state==='speak'?0.1:0);
