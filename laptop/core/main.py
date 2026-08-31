@@ -34,7 +34,7 @@ from bridge import Bridge, start_bridge_in_thread, get_local_ip
 class Core:
     def __init__(self):
         self.llm = BrainClient(model=CFG.main_model)
-        self.agent = Agent("main", on_reply=self._on_reply)
+        self.agent = Agent("main", on_reply=self._on_reply, on_step=self._on_step)
         self.bridge = Bridge()
         self.hud = None
         self.loop = None
@@ -95,6 +95,21 @@ class Core:
         if self.loop:
             asyncio.run_coroutine_threadsafe(
                 self._tts_signal(text), self.loop)
+
+    def _on_step(self, step: int, desc: str, ok: bool):
+        # live HUD progress: stream each agent step as it happens (called from
+        # the agent's worker thread, so schedule sends on the event loop)
+        if not self.loop:
+            return
+        msg = {
+            "type": "transcript",
+            "who": "ultron",
+            "text": "> " + desc,
+            "status": "thinking",
+        }
+        asyncio.run_coroutine_threadsafe(self._send_hud(msg), self.loop)
+        asyncio.run_coroutine_threadsafe(
+            self._send_hud({"type": "state", "state": "thinking"}), self.loop)
 
     async def _tts_signal(self, text: str):
         await self._send_hud({"type": "state", "state": "speaking"})

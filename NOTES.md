@@ -35,7 +35,12 @@ recover with:  `cd /root/jarvis-ultron && git pull origin master`
 - Real webcam hand gestures (MediaPipe) on laptop + phone.
 - Real Vosk mic STT (Hin+Eng) — needs model download + mic.
 - Real Poco X6 Pro ADB (wireless debugging, no root) + UiAutomator dumps.
-- Capacitor APK compile (no JDK/Android SDK on build box).
+- Capacitor APK compile: build box is **aarch64 (ARM64)** Linux; Android's `aapt2`
+  is **x86-64 only** (Google ships no aarch64 build-tools), and box64 can't emulate
+  it. So the APK can't be compiled IN THIS ENVIRONMENT. FIX: the full Capacitor
+  `android/` project IS committed to the repo and build-ready — build it on your
+  x86-64 Windows laptop with `phone/orb-apk/build-apk.ps1` (one command, auto-installs
+  Node/JDK/SDK) -> `android/app/build/outputs/apk/debug/app-debug.apk`.
 - Real GPU render of the premium orb shaders (compile-verified only).
 
 ## HOW TO RUN (see RUNBOOK.md for full commands)

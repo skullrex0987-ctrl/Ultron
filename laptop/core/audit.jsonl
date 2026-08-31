@@ -581,3 +581,219 @@
 {"ts": 1788150823.835585, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.0.0.4:18765:714a9a46", "token": "714a9a46"}}
 {"ts": 1788150824.6586797, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "352979a0d0e8", "name": "poco-x6pro"}}
 {"ts": 1788150825.3640487, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788154333.4976983, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788154333.5064876, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788154333.5210676, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788154333.5249999, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788154333.5275812, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788154333.6801608, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788154333.7516658, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788154333.766183, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788154333.7769175, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788154333.8417957, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154333.8456604, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154333.8488047, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788154333.8518393, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788154333.858404, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788154333.8653815, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788154333.8684027, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788154333.9510298, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.0.0.4:18765:6f232ec4", "token": "6f232ec4"}}
+{"ts": 1788154334.8720195, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "1cd829ca48fe", "name": "poco-x6pro"}}
+{"ts": 1788154335.58438, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788154348.344078, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788154348.3456368, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788154348.350394, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788154348.3528965, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788154348.3558736, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788154348.3789873, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788154348.3934133, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788154348.398443, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788154348.4029608, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788154348.4149475, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154348.4163668, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154348.417194, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788154348.4187372, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788154348.4203827, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788154348.43526, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788154348.436631, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788154348.5080585, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.0.0.4:18765:412ec50e", "token": "412ec50e"}}
+{"ts": 1788154349.3318195, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "a977628cb486", "name": "poco-x6pro"}}
+{"ts": 1788154350.0346532, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788154844.1702068, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788154844.1720603, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788154844.1760283, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788154844.176889, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788154844.1779497, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788154844.2026672, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788154844.2345152, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788154844.241392, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788154844.2470298, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788154844.2652886, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154844.2700527, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154844.2713542, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788154844.272432, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788154844.2742615, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788154844.2756643, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788154844.2768528, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788154844.2885153, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:4e23af20", "token": "4e23af20"}}
+{"ts": 1788154845.2094595, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "0d307bc650b2", "name": "poco-x6pro"}}
+{"ts": 1788154845.9285164, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788154854.7310975, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788154854.7319589, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788154854.7346098, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788154854.7355518, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788154854.7364902, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788154854.7524471, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788154854.7743926, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788154854.7766213, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788154854.7785985, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788154854.7919927, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154854.7940977, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788154854.7967184, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788154854.7983787, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788154854.808582, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 3}}
+{"ts": 1788154854.8109152, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788154854.8134403, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788154854.839557, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:0a14df08", "token": "0a14df08"}}
+{"ts": 1788154855.6730618, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "c4bbc56d8a5a", "name": "poco-x6pro"}}
+{"ts": 1788154856.3791327, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788155062.803954, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155062.806339, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155062.8069723, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155062.8076048, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155103.2742348, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788155103.2753239, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788155103.2800868, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788155103.2810864, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788155103.2822568, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788155103.30957, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788155103.33832, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788155103.3418372, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788155103.3467278, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788155103.3721697, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155103.3751957, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155103.3788188, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155103.3807807, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155103.3843172, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155103.3861518, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788155103.3886757, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155103.423757, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:aba0c6fc", "token": "aba0c6fc"}}
+{"ts": 1788155104.3339875, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "60eda75f53f6", "name": "poco-x6pro"}}
+{"ts": 1788155105.0513406, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788155120.9296184, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788155120.9305964, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788155120.9334908, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788155120.934507, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788155120.9356651, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788155120.958334, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788155120.9960237, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788155121.0023916, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788155121.006986, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788155121.0418658, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155121.04468, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155121.047062, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155121.0496736, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155121.052535, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155121.0557303, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788155121.0584202, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155121.1154518, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:5d95b23b", "token": "5d95b23b"}}
+{"ts": 1788155121.976865, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "076565971fc3", "name": "poco-x6pro"}}
+{"ts": 1788155122.6972759, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788155140.2076926, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155140.2099874, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155140.2107213, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155140.2121904, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155140.2149136, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155140.215887, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788155140.217088, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155228.1109157, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788155228.1142387, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788155228.1181736, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788155228.1191506, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788155228.1200008, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788155228.1536806, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788155228.1873047, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788155228.1949644, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788155228.2035031, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788155228.2317507, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155228.2351635, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155228.2373857, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155228.2397037, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155228.242969, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155228.244299, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788155228.2454736, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155228.3068047, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:c4e7af34", "token": "c4e7af34"}}
+{"ts": 1788155229.2537274, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "d741a2d493f3", "name": "poco-x6pro"}}
+{"ts": 1788155229.972865, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788155267.837745, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788155267.8404803, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788155267.8442202, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788155267.8455102, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788155267.8467693, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788155267.8677738, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788155267.8855214, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788155267.8876371, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788155267.8894925, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788155267.9314404, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155267.9360015, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155267.9386156, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155267.9417691, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155267.949662, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155267.9533262, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788155267.9568517, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155268.0141408, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:57ecc6c9", "token": "57ecc6c9"}}
+{"ts": 1788155268.8972723, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "072b3cbf2d4b", "name": "poco-x6pro"}}
+{"ts": 1788155269.6169508, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788155329.0256226, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155329.0295131, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155329.0308528, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155329.0318136, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155329.0328014, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155329.0334911, "side": "laptop", "event": "agent", "data": {"event": "llm-error", "err": "'int' object is not iterable"}}
+{"ts": 1788155329.0344427, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155373.5161493, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788155373.517029, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788155373.5199513, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788155373.5207453, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788155373.5212831, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788155373.5370617, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788155373.5514245, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788155373.5543869, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788155373.5567195, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788155373.5674136, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155373.5679014, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155373.5683503, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155373.5692887, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155373.5700727, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Plan: 3"}}
+{"ts": 1788155373.5752566, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155373.576104, "side": "laptop", "event": "tool", "data": {"tool": "adb", "cmd": "find \"YouTube\""}}
+{"ts": 1788155373.576974, "side": "laptop", "event": "agent", "data": {"event": "step-done", "tool": "adb", "ok": true, "res": {"ok": true, "found": "YouTube", "tapped": {"ok": true}}}}
+{"ts": 1788155373.5778878, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155373.5782998, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788155373.5785527, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155373.6087742, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:8c279155", "token": "8c279155"}}
+{"ts": 1788155374.4457192, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "723eb7055185", "name": "poco-x6pro"}}
+{"ts": 1788155375.1581414, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
+{"ts": 1788155490.4607158, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 5}}
+{"ts": 1788155490.4627545, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "do X", "steps": 200}}
+{"ts": 1788155490.465542, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.example.app", "rc": 0}}
+{"ts": 1788155490.4663332, "side": "laptop", "event": "adb", "data": {"action": "launch", "pkg": "com.google.android.youtube", "rc": 0}}
+{"ts": 1788155490.4671078, "side": "laptop", "event": "adb", "data": {"action": "tap", "x": 100, "y": 200}}
+{"ts": 1788155490.4919975, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo allowed"}}
+{"ts": 1788155490.503255, "side": "laptop", "event": "tool", "data": {"tool": "file_write", "path": "/tmp/jarvis_test_file.txt", "bytes": 8}}
+{"ts": 1788155490.5049295, "side": "laptop", "event": "tool", "data": {"tool": "file_read", "path": "/tmp/jarvis_test_file.txt"}}
+{"ts": 1788155490.5063121, "side": "laptop", "event": "tool", "data": {"tool": "shell", "cmd": "echo jarvis_ok"}}
+{"ts": 1788155490.5160213, "side": "laptop", "event": "agent", "data": {"event": "step-prompt-default", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155490.5167422, "side": "laptop", "event": "agent", "data": {"event": "step-prompt", "goal": "open youtube", "steps": 200}}
+{"ts": 1788155490.5171402, "side": "laptop", "event": "agent", "data": {"event": "start", "goal": "open youtube", "steps": 200, "plan": true}}
+{"ts": 1788155490.5175855, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Starting: open youtube (max 200 steps)"}}
+{"ts": 1788155490.5180411, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Plan: 3"}}
+{"ts": 1788155490.518728, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155490.5193405, "side": "laptop", "event": "tool", "data": {"tool": "adb", "cmd": "find \"YouTube\""}}
+{"ts": 1788155490.5198405, "side": "laptop", "event": "agent", "data": {"event": "step-done", "tool": "adb", "ok": true, "res": {"ok": true, "found": "YouTube", "tapped": {"ok": true}}}}
+{"ts": 1788155490.5205832, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 1}}
+{"ts": 1788155490.5210516, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Opened YouTube for you."}}
+{"ts": 1788155490.5214853, "side": "laptop", "event": "transcript", "data": {"who": "ultron", "text": "Task complete."}}
+{"ts": 1788155490.5326324, "side": "laptop", "event": "bridge", "data": {"event": "listening", "port": 18765, "qr": "ultron://192.168.1.36:18765:4ddd6279", "token": "4ddd6279"}}
+{"ts": 1788155512.820581, "side": "laptop", "event": "bridge", "data": {"event": "peer-connected", "id": "ac84f1de17f8", "name": "poco-x6pro"}}
+{"ts": 1788155514.0598464, "side": "laptop", "event": "perception", "data": {"mode": "C", "items": 2}}
