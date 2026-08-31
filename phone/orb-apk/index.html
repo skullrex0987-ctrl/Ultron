@@ -168,7 +168,9 @@ let ws; function connect(){try{ws=new WebSocket(`ws://${location.hostname}:8081`
   ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type==='audio')target=m.level;
     if(m.type==='state'){state=m.state;document.getElementById('st').textContent=m.state.toUpperCase();
       const d=document.getElementById('dot');d.className='dot'+(m.state==='idle'?'':' '+m.state);}
-    if(m.type==='transcript'){const t=document.getElementById('tr');t.innerHTML+=`<div>${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;}};}catch(e){}}
+    if(m.type==='transcript'){const t=document.getElementById('tr');t.innerHTML+=`<div>${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;}};
+  ws.onclose=()=>{setTimeout(connect,2000);}; // auto-reconnect if agent restarts
+  ws.onerror=()=>{try{ws.close();}catch(e){}};}catch(e){setTimeout(connect,2000);}}
 connect(); function send(m){if(ws&&ws.readyState===1)ws.send(JSON.stringify(m));}
 document.getElementById('t').onclick=()=>{send({type:'talk'});state='listen';};
 document.getElementById('w').onclick=function(){const w=!this.classList.contains('on');this.classList.toggle('on');send({type:'wake',on:w});};
