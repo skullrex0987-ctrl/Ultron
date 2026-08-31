@@ -1,23 +1,59 @@
 #!/usr/bin/env bash
-# ULTRON phone bootstrap — run in Termux on the Poco X6 Pro (no root).
-# Installs deps, pulls the mini brain, and starts the agent + orb web HUD.
-set -e
-echo "== ULTRON phone bootstrap =="
-pkg update -y && pkg install -y python clang ffmpeg curl git
+# ULTRON phone bootstrap — run ONCE on the Poco X6 Pro in Termux.
+# Installs everything needed to run the mini-brain + orb HUD + floating widget:
+#   - Python deps (websockets, fastapi, uvicorn, vosk, pillow)
+#   - Ollama + the qwen3.5:0.8b mini brain
+#   - Vosk models (Hin+Eng) for offline STT
+#   - android-tools (adb) for wireless self-control (no root)
+#   - links the agent + web HUD
+# After this: `python phone/agent/main_phone.py`
+set -euo pipefail
+echo "[ULTRON] phone bootstrap starting..."
+
+echo "[1/7] Termux packages"
+pkg update -y
+pkg install -y python rust git curl wget android-tools
+
+echo "[2/7] Python deps"
 pip install --upgrade pip
-pip install ollama vosk piper fastapi uvicorn websockets
-# Ollama on Termux (proot/distro recommended; fall back to official if present)
+pip install websockets fastapi uvicorn vosk pillow numpy
+
+echo "[3/7] Ollama"
 if ! command -v ollama >/dev/null 2>&1; then
-  echo "Install Ollama via: pkg install ollama  (or use a proot-distro Linux)"
+  curl -fsSL https://ollama.com/install.sh | sh
 fi
-ollama pull qwen3.5:0.8b || true
-# Vosk models (Hin+Eng, offline)
-mkdir -p ~/models
-[ -d ~/models/vosk-hi ] || (curl -L -o /tmp/vh.zip https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip && unzip -o /tmp/vh.zip -d ~/models && mv ~/models/vosk-model-small-hi-0.22 ~/models/vosk-hi)
-[ -d ~/models/vosk-en ] || (curl -L -o /tmp/ve.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip && unzip -o /tmp/ve.zip -d ~/models && mv ~/models/vosk-model-small-en-us-0.15 ~/models/vosk-en)
-# one-time: enable ADB over TCP for self-control (no root)
-adb tcpip 5555 || true
-echo "== Starting agent =="
-cd "$(dirname "$0")/agent" && nohup python main_phone.py >~/jarvis_agent.log 2>&1 &
-cd "$(dirname "$0")/web" && nohup python main_phone_web.py >~/jarvis_web.log 2>&1 &
-echo "Orb HUD: http://localhost:8080   |   Agent log: ~/jarvis_agent.log"
+# start ollama in background
+nohup ollama serve >/tmp/ollama_serve.log 2>&1 &
+sleep 4
+echo "[4/7] pull mini brain qwen3.5:0.8b (offline local)"
+ollama pull qwen3.5:0.8b
+
+echo "[5/7] Vosk models (Hin+Eng)"
+MODELS_DIR="$HOME/models"
+mkdir -p "$MODELS_DIR"
+dl_vosk() {
+  local name="$1" local="$2"
+  if [ -d "$MODELS_DIR/$local" ]; then echo "   $local present"; return; fi
+  echo "   downloading $name ..."
+  cd "$MODELS_DIR"
+  curl -fsSL "https://alphacephei.com/vosk/models/$name.tar.gz" -o "$name.tar.gz"
+  tar xzf "$name.tar.gz" && mv "$name" "$local"
+  rm -f "$name.tar.gz"
+  cd "$HOME"
+}
+dl_vosk "vosk-model-small-hi-0.22" "vosk-hi"
+dl_vosk "vosk-model-small-en-us-0.15" "vosk-en"
+
+echo "[6/7] Piper (offline TTS)"
+if ! command -v piper >/dev/null 2>&1; then
+  pip install piper-tts || echo "   piper pip failed; install via pkg if needed"
+fi
+
+echo "[7/7] enable wireless debugging helper (no root)"
+echo "   On the phone: Settings > Developer options > Wireless debugging > enable."
+echo "   Then: adb pair <ip:port>  (copy code) ; adb connect <ip:port>"
+echo "   For self-control loopback: adb tcpip 5555 && adb connect 127.0.0.1:5555"
+
+echo "[ULTRON] bootstrap done. Quick self-test:"
+echo "   cd $(pwd)/phone/agent && python selftest_phone.py"
+echo "   cd $(pwd)/phone/agent && python main_phone.py"

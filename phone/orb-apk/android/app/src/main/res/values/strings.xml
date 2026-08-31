@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ULTRON Orb</string>
+    <string name="title_activity_main">ULTRON Orb</string>
+    <string name="package_name">com.ultron.orb</string>
+    <string name="custom_url_scheme">com.ultron.orb</string>
+</resources>

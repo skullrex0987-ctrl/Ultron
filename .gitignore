@@ -3,3 +3,7 @@ __pycache__/
 node_modules/
 .next/
 outbox/
+# local Android SDK / gradle caches (build box only)
+/root/android-sdk/
+/root/.gradle/
+*.real

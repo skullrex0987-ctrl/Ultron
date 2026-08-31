@@ -1,8 +1,10 @@
 {
   "appId": "com.ultron.orb",
   "appName": "ULTRON Orb",
-  "webDir": ".",
-  "server": { "androidScheme": "https" },
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
   "android": {
     "legacySplashScreen": false,
     "splashImageResName": "splash",
@@ -15,6 +17,10 @@
       "backgroundColor": "#000000",
       "androidResourceName": "splash"
     },
-    "Camera": { "permissions": ["camera"] }
+    "Camera": {
+      "permissions": [
+        "camera"
+      ]
+    }
   }
 }

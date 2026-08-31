@@ -55,8 +55,9 @@ class Agent:
     def set_prompt(self, fn: Callable[[str], str]) -> None:
         self._prompt_fn = fn
 
-    def _decide(self, goal: str, step: int, steps: int, scene: dict, history: list[str]) -> dict:
+    def _decide(self, goal: str, step: int, steps: int, scene: dict, history: list[str], plan: list[str] | None = None) -> dict:
         hist = "\n".join(f"  - {h}" for h in history[-6:]) or "  (none yet)"
+        plan_txt = ("\nPlanned steps: " + " -> ".join(str(p) for p in (plan or [])) + "\n") if plan else ""
         ctx = (
             f"Goal: {goal}\n"
             f"Step {step+1}/{steps}\n"
@@ -72,21 +73,37 @@ class Agent:
         )
         return self.llm.chat(ctx)
 
-    def run(self, goal: str, perception_mode: str = "C") -> dict:
+    def run(self, goal: str, perception_mode: str = "C", use_plan: bool = True) -> dict:
         _check_kill()
         steps = self.ask_steps(goal)
-        log("agent", {"event": "start", "goal": goal, "steps": steps})
+        log("agent", {"event": "start", "goal": goal, "steps": steps, "plan": use_plan})
         transcript(f"Starting: {goal} (max {steps} steps)", who="ultron")
 
         self.android.connect()
         results = []
         history: list[str] = []
         unlocked = False
+        plan_steps: list[str] = []
+        if use_plan:
+            try:
+                p = self.llm.chat(
+                    f"Goal: {goal}\nBreak this into an ordered list of short "
+                    f"action steps (one verb each, e.g. 'unlock', 'open youtube', "
+                    f"'search cats'). Reply as a JSON list of strings.")
+                import json as _j
+                try:
+                    plan_steps = _j.loads(p.get("args", {}).get("text", "[]")) if isinstance(p, dict) else []
+                except Exception:
+                    plan_steps = []
+                if isinstance(plan_steps, list) and plan_steps:
+                    transcript("Plan: " + " -> ".join(str(s) for s in plan_steps), who="ultron")
+            except Exception as e:
+                log("agent", {"event": "plan-error", "err": str(e)})
 
         for i in range(steps):
             _check_kill()
             scene = perceive(self.android, perception_mode)
-            # unlock pre-step: keyguard detected (empty screen, not yet unlocked)
+            # unlock pre-step
             if not unlocked and (not scene.get("items") and perception_mode == "C"):
                 self.android._adb("shell", "input", "keyevent", "82")
                 self.android._adb("shell", "input", "swipe", "540", "1800", "540", "900")
@@ -94,7 +111,7 @@ class Agent:
                 history.append("unlocked screen (keyevent 82 + swipe)")
                 continue
             try:
-                call = self._decide(goal, i, steps, scene, history)
+                call = self._decide(goal, i, steps, scene, history, plan_steps)
             except Exception as e:  # noqa
                 log("agent", {"event": "llm-error", "err": str(e)})
                 results.append({"step": i, "error": str(e)})
@@ -113,11 +130,10 @@ class Agent:
             ok = res.get("ok", False)
             log("agent", {"event": "step-done", "tool": tool, "ok": ok, "res": res})
             results.append({"step": i, "tool": tool, "res": res})
-            history.append(f"step {i}: {tool} -> {'ok' if ok else 'FAILED ' + str(res.get('reason',''))}")
+            history.append(f"step {i}: {tool} -> {'ok' if ok else 'FAILED ' + str(res.get('reason', ''))}")
 
-            # self-correction: if adb 'find' failed, try launching the app then re-find
+            # self-correction: find failed -> launch app then re-find
             if tool == "adb" and not ok and "not-found" in str(res.get("reason", "")):
-                # guess the app name from the goal (first known app keyword)
                 app = next((k for k in CFG.app_launch if k in goal.lower()), None)
                 if app:
                     self.android.launch(app)
@@ -131,7 +147,6 @@ class Agent:
                         continue
                 transcript(f"Could not find UI element: {res.get('reason')}", who="ultron")
 
-            # verify: after a UI action, confirm the expected element is present
             if tool == "adb":
                 cmd = str(call.get("args", {}).get("cmd", ""))
                 if "find" in cmd and ok:
@@ -140,4 +155,4 @@ class Agent:
                         log("agent", {"event": "verify-failed", "target": target})
 
         transcript("Task complete.", who="ultron")
-        return {"goal": goal, "steps_run": len(results), "results": results}
+        return {"goal": goal, "steps_run": len(results), "plan": plan_steps, "results": results}
