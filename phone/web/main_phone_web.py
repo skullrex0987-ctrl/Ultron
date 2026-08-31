@@ -104,24 +104,56 @@ const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(55,innerWidth/inne
 const ren=new THREE.WebGLRenderer({antialias:true});ren.setSize(innerWidth,innerHeight);
 document.getElementById('orb').appendChild(ren.domElement);
 const grp=new THREE.Group();scene.add(grp);
-const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.35,1),
-  new THREE.MeshBasicMaterial({color:0xffcc66,wireframe:true}));grp.add(core);
-for(let i=0;i<8;i++){const r=new THREE.Mesh(new THREE.TorusGeometry(.8+i*.12,0.012,8,90),
-  new THREE.MeshBasicMaterial({color:0xffaa30,transparent:true,opacity:.4-i*.04}));
-  r.rotation.x=Math.random()*3;grp.add(r);}
-// particles
-const N=600,p=new Float32Array(N*3);
-for(let i=0;i<N;i++){const rr=.5+Math.random()*3,t=Math.random()*6.28,ph=Math.acos(2*Math.random()-1);
-  p[i*3]=rr*Math.sin(ph)*Math.cos(t);p[i*3+1]=rr*Math.cos(ph);p[i*3+2]=rr*Math.sin(ph)*Math.sin(t);}
-const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(p,3));
-grp.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0xffaa30,size:0.02,transparent:true,opacity:.6})));
-cam.position.z=3.6;let lvl=0,rot=0;
+const C={amber:0xffaa30,hot:0xffcc66,ice:0x66ccff,mid:0xdd7700,grn:0x66ff99};
+function colForState(s){return new THREE.Color(s==='listen'?C.hot:s==='think'?C.ice:s==='speak'?C.grn:C.amber);}
+// PREMIUM fresnel energy core
+const cu={uTime:{value:0},uLevel:{value:0},uColorA:{value:new THREE.Color(C.hot)},uColorB:{value:new THREE.Color(C.ice)}};
+const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.5,4),new THREE.ShaderMaterial({
+  uniforms:cu,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
+  vertexShader:`varying vec3 vN;varying vec3 vP;varying vec2 vUv;void main(){vUv=uv;vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vP=mv.xyz;gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float uTime;uniform float uLevel;uniform vec3 uColorA;uniform vec3 uColorB;varying vec3 vN;varying vec3 vP;varying vec2 vUv;
+   float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+   float noise(vec2 p){vec2 i=floor(p),f=fract(p);float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));vec2 u=f*f*(3.0-2.0*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
+   void main(){float fres=pow(1.0-abs(dot(normalize(vN),normalize(-vP))),2.0);
+   float ripple=sin(vUv.y*20.0+uTime*10.0)*uLevel*0.3;
+   float pulse=0.5+0.5*sin(uTime*3.0)+uLevel*1.5+ripple;
+   float caust=noise(vUv*6.0+uTime*0.3)*0.25;
+   vec3 col=mix(uColorA,uColorB,fres)+caust;
+   gl_FragColor=vec4(col*pulse,fres*0.9+uLevel*0.45+0.08+caust*0.3);}`}));grp.add(core);
+// inner glow
+const glow=new THREE.Mesh(new THREE.SphereGeometry(.62,32,32),new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false}));grp.add(glow);
+// god-ray sprite
+const rtex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.2,'rgba(255,220,150,.7)');g.addColorStop(.5,'rgba(255,160,60,.25)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
+const ray=new THREE.Sprite(new THREE.SpriteMaterial({map:rtex,color:C.hot,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.5}));ray.scale.set(6.5,6.5,1);grp.add(ray);
+// nebula
+const N=1200,pp=new Float32Array(N*3),cc=new Float32Array(N*3),ca=new THREE.Color(C.amber),cb=new THREE.Color(C.ice);
+for(let i=0;i<N;i++){const r=.5+Math.random()*3,t=Math.random()*6.28,ph=Math.acos(2*Math.random()-1);
+  pp[i*3]=r*Math.sin(ph)*Math.cos(t);pp[i*3+1]=r*Math.cos(ph);pp[i*3+2]=r*Math.sin(ph)*Math.sin(t);
+  const col=ca.clone().lerp(cb,Math.random());cc[i*3]=col.r;cc[i*3+1]=col.g;cc[i*3+2]=col.b;}
+const ng=new THREE.BufferGeometry();ng.setAttribute('position',new THREE.BufferAttribute(pp,3));ng.setAttribute('color',new THREE.BufferAttribute(cc,3));
+const neb=new THREE.Points(ng,new THREE.PointsMaterial({size:.05,vertexColors:true,transparent:true,opacity:.6,blending:THREE.AdditiveBlending,depthWrite:false,map:rtex}));grp.add(neb);
+// post-processing bloom + chromatic
+const {EffectComposer}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/EffectComposer.js");
+const {RenderPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/RenderPass.js");
+const {UnrealBloomPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/UnrealBloomPass.js");
+const {ShaderPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/ShaderPass.js");
+const composer=new EffectComposer(ren);composer.addPass(new RenderPass(scene,cam));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.7,0.5,0.2);composer.addPass(bloom);
+const chrom=new ShaderPass({uniforms:{tDiffuse:{value:null}},vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform sampler2D tDiffuse;varying vec2 vUv;void main(){vec2 d=vUv-0.5;float o=0.0035*length(d);vec4 cr=texture2D(tDiffuse,vUv+d*o);vec4 cg=texture2D(tDiffuse,vUv);vec4 cb=texture2D(tDiffuse,vUv-d*o*0.5);gl_FragColor=vec4(cr.r,cg.g*1.05,cb.b*0.6,1.0);}`});composer.addPass(chrom);
+cam.position.z=3.6;let lvl=0,tgt=0,state='idle',rot=0;
 function animate(){requestAnimationFrame(animate);rot+=.004;grp.rotation.y=rot;grp.rotation.x=Math.sin(rot/3)*.1;
-  core.scale.setScalar(1+lvl*0.7);ren.render(scene,cam);}animate();
+  lvl=THREE.MathUtils.lerp(lvl,tgt,0.25);cu.uTime.value=performance.now()/1000;cu.uLevel.value=lvl;
+  core.scale.setScalar(1+lvl*0.7+Math.sin(performance.now()/1000*0.8)*0.04);
+  glow.scale.setScalar(1+lvl*0.6);glow.material.opacity=0.1+lvl*0.5+(state==='speak'?0.1:0);
+  ray.material.opacity=0.35+lvl*0.6+(state==='listen'?0.15:0);
+  const sc=colForState(state);cu.uColorA.value.lerp(sc,0.06);neb.material.color.lerp(sc,0.06);
+  bloom.strength=1.6+Math.sin(performance.now()/1000*0.8)*0.3+lvl*1.2;
+  composer.render(scene,cam);}animate();
 // hand tracking
 let ws;try{ws=new WebSocket(`ws://${location.hostname}:8081`);}catch(e){}
 ws&&ws.addEventListener('message',e=>{const m=JSON.parse(e.data);
-  if(m.type==='audio')lvl=m.level;if(m.type==='state')document.getElementById('st').textContent=m.state.toUpperCase();
+  if(m.type==='audio')lvl=m.level;if(m.type==='state'){state=m.state;document.getElementById('st').textContent=m.state.toUpperCase();}
   if(m.type==='gesture')document.getElementById('gst').textContent='GESTURE: '+m.name;
   if(m.type==='transcript'){const t=document.getElementById('tr');
     t.innerHTML+=`<div>${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;}});
