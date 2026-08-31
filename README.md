@@ -40,6 +40,20 @@ fallback, never a requirement.
 
 ---
 
+## 📚 Documentation (start here)
+
+New to ULTRON? Read these in order — they are written step by step:
+
+- **[STEP_BY_STEP.md](STEP_BY_STEP.md)** — the *entire* project, from clone to a
+  linked laptop+phone mesh, in numbered steps.
+- **[phone/orb-apk/APK_BUILD.md](phone/orb-apk/APK_BUILD.md)** — every single step
+  to compile and install the ULTRON Orb APK, with troubleshooting.
+- [RUNBOOK.md](RUNBOOK.md) — quick run commands for each component.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to add tools / model providers.
+- [SECURITY.md](SECURITY.md) — offline-by-default, kill-switch, report a vuln.
+- [ROADMAP.md](ROADMAP.md) — what's done vs planned.
+- [NOTES.md](NOTES.md) — build log / status.
+
 ## 🏗️ Architecture
 
 ```
@@ -194,6 +208,11 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 The script installs web assets, syncs the ULTRON Orb logo into the mipmaps, runs
 `capacitor sync`, and assembles the debug APK.
+
+> 📖 **Full, every-step instructions (prereqs → install → clone → sync → build →
+> install → troubleshoot) are in
+> [phone/orb-apk/APK_BUILD.md](phone/orb-apk/APK_BUILD.md).** The scripts above
+> automate all of it, but the doc explains each stage so you can fix issues.
 
 ---
 
