@@ -7,7 +7,7 @@
  */
 import * as THREE from "three";
 
-type OrbState = "idle" | "listening" | "thinking" | "speaking";
+type OrbState = "idle" | "listening" | "thinking" | "speaking" | "recovering";
 
 export interface PremiumOrb {
   group: THREE.Group;
@@ -24,6 +24,7 @@ function colForState(s: OrbState): THREE.Color {
     case "listening": return new THREE.Color(0xfff2dd); // hot / white
     case "thinking": return new THREE.Color(0x66ccff);  // ice / blue
     case "speaking": return new THREE.Color(0x66ff99);  // green
+    case "recovering": return new THREE.Color(0xff5544);  // alert red/amber (self-heal)
   }
 }
 
@@ -178,13 +179,14 @@ export function createPremiumOrb(): PremiumOrb {
       shellUniforms.uColor.value.lerp(shellTint, 0.05);
 
       const listenThrob = state === "listening" ? (0.5 + 0.5 * Math.sin(t * 9.0)) * 0.35 : 0;
-      const breathe = 1 + Math.sin(t * 0.8) * 0.04 + audio * 0.5 + listenThrob;
+      const recoverThrob = state === "recovering" ? (0.5 + 0.5 * Math.sin(t * 14.0)) * 0.5 : 0;
+      const breathe = 1 + Math.sin(t * 0.8) * 0.04 + audio * 0.5 + listenThrob + recoverThrob;
       core.scale.setScalar(breathe);
       glow.scale.setScalar(breathe * (1 + audio * 0.6));
-      (glow.material as THREE.MeshBasicMaterial).opacity = 0.1 + audio * 0.5 + (state === "speaking" ? 0.12 : 0) + listenThrob;
-      rayMat.opacity = 0.35 + audio * 0.6 + (state === "listening" ? 0.25 + 0.2*Math.sin(t*9.0) : 0) + (state === "thinking" ? 0.1 : 0);
-      ray.scale.setScalar(6 + audio * 3 + Math.sin(t * 0.5) * 0.3 + listenThrob * 2);
-      ray.material.color.set(state === "thinking" ? 0x66ccff : state === "listening" ? 0xffdd88 : 0xffbb55);
+      (glow.material as THREE.MeshBasicMaterial).opacity = 0.1 + audio * 0.5 + (state === "speaking" ? 0.12 : 0) + listenThrob + recoverThrob * 0.6;
+      rayMat.opacity = 0.35 + audio * 0.6 + (state === "listening" ? 0.25 + 0.2*Math.sin(t*9.0) : 0) + (state === "thinking" ? 0.1 : 0) + recoverThrob * 0.8;
+      ray.scale.setScalar(6 + audio * 3 + Math.sin(t * 0.5) * 0.3 + listenThrob * 2 + recoverThrob * 2);
+      ray.material.color.set(state === "thinking" ? 0x66ccff : state === "listening" ? 0xffdd88 : state === "recovering" ? 0xff5544 : 0xffbb55);
 
       // counter-rotate the depth shell for volumetric feel
       shell.rotation.y -= 0.0009;
