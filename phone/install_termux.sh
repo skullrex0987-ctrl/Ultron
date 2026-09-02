@@ -54,8 +54,10 @@ step 5/7 "Vosk models (Hin+Eng, offline STT)"
 MODELS="$HOME/models"; mkdir -p "$MODELS"
 dl(){ [ -d "$MODELS/$2" ] && { ok "$2 present"; return; }
   echo "   downloading $1 (~50MB)..."
-  (cd "$MODELS" && curl -fsSL "https://alphacephei.com/vosk/models/$1.tar.gz" -o "$1.tar.gz" \
-    && tar xzf "$1.tar.gz" && mv "$1" "$2" && rm -f "$1.tar.gz" && ok "$2") || fail "$2 download"; }
+  local ext="tar.gz"; case "$1" in *hi*) ext="zip";; esac
+  (cd "$MODELS" && curl -fsSL "https://alphacephei.com/vosk/models/$1.$ext" -o "m.$ext" \
+    && { [ "$ext" = zip ] && unzip -q -o m.zip || tar xzf m.tar.gz; } \
+    && rm -f m.zip m.tar.gz && mv "$1" "$2" && ok "$2") || fail "$2 download"; }
 dl "vosk-model-small-hi-0.22" "vosk-hi"
 dl "vosk-model-small-en-us-0.15" "vosk-en"
 
