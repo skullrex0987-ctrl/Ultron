@@ -36,6 +36,14 @@
     </application>
 
     <!-- Permissions -->
-
+    <!-- CAMERA: MediaPipe hand gestures via front camera (getUserMedia) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- RECORD_AUDIO + MODIFY_AUDIO_SETTINGS: mic capture for voice input / audio-reactive orb -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Hardware features (notRequired so it installs on devices without front cam) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>
