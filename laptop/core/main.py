@@ -24,13 +24,13 @@ try:
 except Exception:  # pragma: no cover
     _HAVE_WS = False
 
-from core.config import CFG
-from core.audit import log, transcript
-from core.ollama_client import BrainClient
-from core.agent import Agent, KillSwitch
-from core.bridge import Bridge, start_bridge_in_thread, get_local_ip
-import core.selfheal as selfheal
-from core.selfheal import Supervisor, HealthWatch, check_ollama, ensure_vosk_model, pull_ollama
+from config import CFG
+from audit import log, transcript
+from ollama_client import BrainClient
+from agent import Agent, KillSwitch
+from bridge import Bridge, start_bridge_in_thread, get_local_ip
+import selfheal
+from selfheal import Supervisor, HealthWatch, check_ollama, ensure_vosk_model, pull_ollama
 
 
 class Core:

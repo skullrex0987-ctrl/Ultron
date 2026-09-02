@@ -5,11 +5,12 @@ so we prove the screencap->OCR pipeline wires correctly without a real device
 or tesseract.
 """
 import sys
+import os
 import types
 import unittest
 from unittest import mock
 
-sys.path.insert(0, "/root/jarvis-ultron/laptop/core")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "laptop", "core"))
 
 
 class TestPerception(unittest.TestCase):

@@ -11,7 +11,7 @@ import os, sys, types
 import unittest
 from unittest import mock
 
-ROOT = "/root/jarvis-ultron/laptop/core"
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "laptop", "core")
 sys.path.insert(0, ROOT)
 
 

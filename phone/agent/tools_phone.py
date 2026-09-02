@@ -8,7 +8,7 @@ import urllib.request
 import urllib.parse as _uparse
 from typing import Optional
 
-from agent.config_phone import CFG
+from config_phone import CFG
 
 # Commands that require an explicit confirm even in auto mode (mirrors laptop)
 DESTRUCTIVE = ("rm -rf", "mkfs", "dd if=", "format", "shutdown", "reboot",
