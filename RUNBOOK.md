@@ -5,10 +5,14 @@ Both apps are SEPARATE but link on LAN (full mesh). Pick per device.
 ## 0. Prereqs (one-time)
 - Laptop: Python 3.11+, Node 18+, Ollama (`ollama pull qwen3.5:4b`), `pip install websockets`
   - Android control: `adb pair` / `adb connect PHONE_IP:PORT` (wireless debugging, no root)
-- Phone (Termux): `pkg install python`, `pip install websockets fastapi uvicorn`,
-  `pip install vosk` + download Vosk models (hi/en), `pip install piper`,
-  `pkg install android-tools` (for `adb`), enable Wireless debugging in dev settings.
-  - `adb tcpip 5555` then `adb connect 127.0.0.1:5555` (loopback, self-control).
+  - Or double-click install: everything (venv, models, launcher) at `D:\ULTRON\START_ULTRON.bat`
+- Phone (Termux): ONE LINE —
+  `curl -fsSL https://raw.githubusercontent.com/skullrex0987-ctrl/Ultron/main/phone/install_termux.sh | bash`
+  installs packages, repo (~/ultron), Ollama + qwen3.5:0.8b, Vosk hi/en, Piper, and the
+  `ultron` command (`ultron start|test|log|stop|update`).
+  - Then one-time: enable Wireless debugging in dev settings, `adb tcpip 5555`,
+    `adb connect 127.0.0.1:5555` (loopback, self-control).
+  - Orb app: `curl -fsSL -o ~/ultron-orb.apk https://github.com/skullrex0987-ctrl/Ultron/releases/latest/download/ULTRON-Orb-universal.apk` — install, tap ⚙, set agent URL `ws://127.0.0.1:8081`.
 
 ## 1. LAPTOP (main brain, holographic HUD)
 ```bash
@@ -24,16 +28,17 @@ cd ../../hud && npm run dev         # open http://localhost:3000
   and it activates the laptop mic (Vosk + sounddevice), fully offline.
 - Brain: qwen3.5:4b local; auto-reroutes to cloud if configured (ULTRON_CLOUD_FB=1 + ULTRON_CLOUD_URL/KEY).
 
-## 2. PHONE (Termux mini-brain + web orb + floating widget)
+## 2. PHONE (Termux mini-brain + orb APK)
 ```bash
-cd phone/agent
-python main_phone.py                # mini-brain qwen3.5:0.8b + WS on :8081 + mesh
-# web orb HUD (in phone browser):
-cd ../web && python -m uvicorn main_phone_web:app --host 0.0.0.0 --port 8080
+ultron start        # mini-brain qwen3.5:0.8b + WS on :8081 + mesh (installed by the one-liner)
+ultron test         # on-device self-test — everything should PASS
 ```
+- The standalone **ULTRON Orb APK** (gesture-controlled, fully offline) is the primary phone UI:
+  latest universal build always at
+  `https://github.com/skullrex0987-ctrl/Ultron/releases/latest/download/ULTRON-Orb-universal.apk`
 - Falls back to local 0.8b when laptop unreachable (full mesh Q1 A / Q23 A).
 - Voice on phone: say "ultron" to wake (offline Vosk Hin+Eng via phone/agent/voice_phone.py),
-  or use the web HUD / APK type box for typed input. No button needed.
+  or use the orb app's TALK button / gestures. No button needed.
 - Floating widget (Kotlin): see phone/floating_widget; build APK via Capacitor in phone/orb-apk.
 
 ## 3. LINK THE TWO (mesh)

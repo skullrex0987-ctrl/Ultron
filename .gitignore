@@ -7,3 +7,9 @@ outbox/
 /root/android-sdk/
 /root/.gradle/
 *.real
+
+# ULTRON — orb headless-check build artifacts (regenerated per run)
+phone/orb-apk/_check/_gen/
+phone/orb-apk/_check/index.html
+phone/orb-apk/_check/_broken_index.html
+phone/orb-apk/_check/_probe.cjs
