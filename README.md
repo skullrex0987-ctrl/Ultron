@@ -155,26 +155,37 @@ npm run dev          # open http://localhost:3000
 
 The HUD's **TALK** button uses your browser mic (Web Speech API) → transcript → brain.
 
-### Phone (Termux mini-brain + web orb + floating widget)
+### Phone (Termux mini-brain) — ONE LINE
 
 ```bash
-# in Termux:
-pkg install python clang ffmpeg android-tools
-pip install websockets fastapi uvicorn vosk piper
-ollama pull qwen3.5:0.8b          # if you run Ollama on the phone
+curl -fsSL https://raw.githubusercontent.com/skullrex0987-ctrl/Ultron/main/phone/install_termux.sh | bash
+```
 
-# 1) start the mini-brain
-cd phone/agent
-python main_phone.py              # WS on :8081 + mesh
+That single command installs everything: packages, clones this repo to `~/ultron`,
+Python deps, Ollama + the `qwen3.5:0.8b` mini-brain, Vosk models (Hin+Eng), and
+Piper TTS. It also installs the **`ultron` command** — daily use is then just:
 
-# 2) in another Termux session, start the web orb HUD
-cd ../web
-python -m uvicorn main_phone_web:app --host 0.0.0.0 --port 8080
-# open http://<phone-ip>:8080 in the phone browser
+```bash
+ultron start     # launch the agent (WS :8081 + mesh)
+ultron test      # on-device self-test — everything should PASS
+ultron log       # live log (ultron stop / ultron update also work)
+```
 
-# one-time, for self-control via ADB:
+**Orb app (the gesture-controlled orb):** grab the latest universal APK —
+
+```bash
+curl -fsSL -o ~/ultron-orb.apk https://github.com/skullrex0987-ctrl/Ultron/releases/latest/download/ULTRON-Orb-universal.apk
+```
+
+Open the file, allow "install unknown apps", install, then in the app tap **⚙** and
+set the agent URL to `ws://127.0.0.1:8081`. Gestures: PINCH talk · OPEN-PALM listen ·
+PEACE screenshot · THUMBS-UP volume · SWIPE prev/next · 2-HAND zoom. Fully offline.
+
+**One-time (self-control via ADB, no root):**
+
+```bash
 adb tcpip 5555
-adb connect 127.0.0.1:5555        # loopback, no root required
+adb connect 127.0.0.1:5555        # loopback
 ```
 
 The Kotlin **floating widget** (`phone/floating_widget`) can be built separately:

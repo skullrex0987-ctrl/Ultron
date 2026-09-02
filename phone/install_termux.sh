@@ -95,9 +95,11 @@ cat <<'EOF'
     ultron log       # live agent log
     ultron stop      # stop it
 
-  Orb app: install ULTRON-Orb APK from GitHub releases, open it,
-  tap ⚙ and set the agent URL to:  ws://127.0.0.1:8081
-  (same phone = 127.0.0.1; gestures + voice now work fully offline)
+  Orb app: install the ULTRON Orb APK (v1.2.2+, universal, offline)
+    direct download:
+      curl -fsSL -o ~/ultron-orb.apk https://github.com/skullrex0987-ctrl/Ultron/releases/latest/download/ULTRON-Orb-universal.apk
+    then on the phone: open the file, allow "install unknown apps", install
+    open the orb -> tap the ⚙ button -> agent URL: ws://127.0.0.1:8081
 
   One-time (wireless self-control, no root):
     Settings > Developer options > Wireless debugging > ON
