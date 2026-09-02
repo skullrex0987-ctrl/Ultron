@@ -91,6 +91,28 @@
   </div>
   <div id="boot">U.L.T.R.O.N.</div>
 
+<script>
+  // SAFETY NET (plain script — runs even if the module below fails entirely).
+  // Clears the splash no matter what, and shows a visible error if the orb
+  // engine failed to boot (instead of a frozen U.L.T.R.O.N. screen).
+  window.addEventListener("error", function (e) {
+    var b = document.getElementById("boot");
+    if (b) {
+      b.style.letterSpacing = "0.1em";
+      b.style.fontSize = "11px";
+      b.style.color = "#ff5566";
+      b.style.padding = "0 20px";
+      b.style.textAlign = "center";
+      b.textContent = "ORB ERROR: " + (e && e.message ? e.message : "unknown");
+      setTimeout(function () { b.remove(); }, 6000);
+    }
+  });
+  setTimeout(function () {
+    var b = document.getElementById("boot");
+    if (b) b.remove();   // hard fallback: never stay stuck on the splash
+  }, 5000);
+</script>
+
 <script type="importmap">
 {
   "imports": {
