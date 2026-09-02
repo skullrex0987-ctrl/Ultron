@@ -6,7 +6,7 @@
 # What it does (idempotent — safe to re-run):
 #   [1] packages: python git curl wget android-tools rust binutils
 #   [2] clones/updates the Ultron repo to ~/ultron
-#   [3] pip deps for the agent
+#   [3] pip deps for the agent (vosk built from source)
 #   [4] Ollama (Termux build) + mini brain qwen3.5:0.8b
 #   [5] Vosk models (Hin + Eng) for offline STT
 #   [6] piper-tts for offline voice
@@ -32,7 +32,7 @@ else
   git clone -q --depth 1 https://github.com/skullrex0987-ctrl/Ultron.git "$HOME/ultron" && ok "cloned to ~/ultron" || fail "clone — check network"
 fi
 
-step 3/7 "Python deps (live pip progress; optional pkgs skip gracefully)"
+step 3/7 "Python deps (all required packages with live progress)"
 # NOTE: no 'pip install --upgrade pip' here — it downloads a whole new pip
 # before doing anything useful (the #1 cause of 'stuck at websockets').
 # REQUIRED: agent core — abort-worthy if missing. pip runs UNsilenced so the
@@ -42,7 +42,7 @@ pipws() {
   # 15s watchdog keeps printing so a slow network never looks frozen
   ( while sleep 15; do echo "   …still working (pip resolving/downloading — slow networks take minutes) [$(date +%H:%M:%S)]"; done ) &
   local WD=$!
-  pip install --no-cache-dir --timeout 45 --retries 2 websockets
+  pip install --no-cache-dir --timeout 120 --retries 3 websockets
   local RC=$?
   kill $WD 2>/dev/null
   return $RC
@@ -54,17 +54,46 @@ else
   pkg install -y python-websockets >/dev/null 2>&1 && ok "websockets (pkg)" || {
     fail "websockets (REQUIRED — the agent cannot run without it)"; exit 1; }
 fi
-# OPTIONAL extras — what each is actually FOR:
-#   fastapi+uvicorn : web-orb HUD in the phone BROWSER (port 8080) —
-#                     skip if you only use the Orb APK (recommended)
-#   vosk            : offline voice input (wake word "ultron"). Needs a
-#                     matching Python wheel — none for 3.14 yet.
-for p in fastapi uvicorn vosk; do
+
+# BUILD VOSK FROM SOURCE (required for wake word detection)
+# Since Rust/Cargo are installed in step 1, we can build vosk from source
+# This handles Python versions without pre-built wheels (like Python 3.14)
+step 3a "Building VOSK from source (required for wake word detection)"
+echo "   Building vosk from source (this may take several minutes)..."
+# Install build dependencies for vosk
+pkg install -y python-dev clang make cmake >/dev/null 2>&1 || true
+pipws_vosk() {
+  ( while sleep 15; do echo "   …still building vosk (this takes several minutes) [$(date +%H:%M:%S)]"; done ) &
+  local WD=$!
+  pip install --no-cache-dir --timeout 300 --retries 3 vosk
+  local RC=$?
+  kill $WD 2>/dev/null
+  return $RC
+}
+if python -c "import vosk" >/dev/null 2>&1; then ok "vosk (already present)"
+elif pipws_vosk; then ok "vosk (built from source)"
+else
+  echo "   WARNING: vosk build failed - wake word detection will be unavailable"
+  echo "   You can still use the text command box in the Orb app"
+fi
+
+# REQUIRED PACKAGES (no longer optional - install everything)
+echo "   Installing required packages..."
+for p in fastapi uvicorn pillow numpy piper-tts; do
   if python -c "import $p" >/dev/null 2>&1; then ok "$p (already present)"; continue; fi
-  echo "   optional: $p"
-  if pip install --no-cache-dir --timeout 45 --retries 2 "$p" >/dev/null 2>&1; then ok "$p"
-  else echo "   (skip $p — not installable on this Python; install continues)"; fi
+  echo "   installing $p..."
+  if pip install --no-cache-dir --timeout 60 --retries 2 "$p" >/dev/null 2>&1; then ok "$p"
+  else echo "   WARNING: $p install failed (will retry on next run)"; fi
 done
+
+# Verify sounddevice is available for voice input
+if python -c "import sounddevice" >/dev/null 2>&1; then ok "sounddevice (already present)"
+else
+  echo "   installing sounddevice..."
+  if pip install --no-cache-dir --timeout 60 --retries 2 sounddevice >/dev/null 2>&1; then ok "sounddevice"
+  else echo "   WARNING: sounddevice install failed"; fi
+fi
+
 python - <<'PY' 2>/dev/null || true
 try:
     import vosk  # noqa
@@ -72,7 +101,7 @@ try:
 except Exception:
     print("   NOTE: vosk unavailable on this Python -> VOICE INPUT OFF.")
     print("   The agent + orb still work fully: TYPE commands in the orb's")
-    print("   text box (bottom-left). Retry 'vosk' later once a wheel ships.")
+    print("   text box (bottom-left). Retry 'vosk' later once a wheel ships."
 PY
 
 step 4/7 "Ollama + mini brain qwen3.5:0.8b"
@@ -82,7 +111,8 @@ fi
 (command -v ollama >/dev/null 2>&1) && { nohup ollama serve >"$HOME/ollama.log" 2>&1 & sleep 3; }
 if command -v ollama >/dev/null 2>&1; then
   if ollama list 2>/dev/null | grep -q "qwen3.5:0.8b"; then ok "qwen3.5:0.8b already present"
-  else ollama pull qwen3.5:0.8b >/dev/null 2>&1 && ok "pulled qwen3.5:0.8b" || fail "model pull (run: ollama pull qwen3.5:0.8b)"; fi
+  else ollama pull qwen3.5:0.8b >/dev/null 2>&1 && ok "pulled qwen3.5:0.8b" || fail "model pull (run: ollama pull qwen3.5:0.8b)"
+fi
 else
   echo "   (skip — install ollama manually if you want the on-phone brain)"
 fi
@@ -121,7 +151,7 @@ chmod +x "$HOME/bin/ultron"
 grep -q 'export PATH="$HOME/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null || \
   echo 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.bashrc"
 export PATH="$HOME/bin:$PATH"
-ok "run:  ultron start   (then ultron test / ultron log)"
+ok "run:  ultron start   (then ultron test / ultron log / ultron stop / ultron update)"
 
 step 7/7 "done — DAILY USE"
 cat <<'EOF'
@@ -131,12 +161,14 @@ cat <<'EOF'
     ultron test      # self-test, all should PASS
     ultron log       # live agent log
     ultron stop      # stop it
+    ultron update    # update from git
 
-  Orb app: install the ULTRON Orb APK (v1.2.2+, universal, offline)
+  Orb app: install the ULTRON Orb APK (v1.2.4+, universal, offline)
     direct download:
       curl -fsSL -o ~/ultron-orb.apk https://github.com/skullrex0987-ctrl/Ultron/releases/latest/download/ULTRON-Orb-universal.apk
     then on the phone: open the file, allow "install unknown apps", install
     open the orb -> tap the ⚙ button -> agent URL: ws://127.0.0.1:8081
+    (same phone = 127.0.0.1; gestures + voice + text commands work fully offline)
 
   One-time (wireless self-control, no root):
     Settings > Developer options > Wireless debugging > ON
