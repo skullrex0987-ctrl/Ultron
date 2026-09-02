@@ -11,7 +11,7 @@ import json
 import time
 from typing import Optional, Callable
 
-from config_phone import CFG
+from agent.config_phone import CFG
 
 
 class LaptopLink:
@@ -19,6 +19,7 @@ class LaptopLink:
         self.sock: Optional[socket.socket] = None
         self.linked = False
         self.on_message: Optional[Callable[[dict], None]] = None
+        self._buffer = ""  # Buffer for partial JSON messages
 
     def connect(self, host: Optional[str] = None, port: Optional[int] = None,
                 token: Optional[str] = None) -> bool:
@@ -38,6 +39,7 @@ class LaptopLink:
             s.sendall((hello + "\n").encode())
             self.sock = s
             self.linked = True
+            self._buffer = ""
             return True
         except OSError:
             self.linked = False
@@ -59,7 +61,19 @@ class LaptopLink:
             if not raw:
                 self.linked = False
                 return None
-            return json.loads(raw.decode().strip())
+            # Add to buffer and extract complete JSON messages
+            self._buffer += raw.decode()
+            # Split by newline to find complete messages
+            while "\n" in self._buffer:
+                line, self._buffer = self._buffer.split("\n", 1)
+                line = line.strip()
+                if line:
+                    try:
+                        return json.loads(line)
+                    except json.JSONDecodeError:
+                        # Log error but continue to next line
+                        continue
+            return None
         except socket.timeout:
             return None
         except OSError:
@@ -78,9 +92,8 @@ class LaptopLink:
 def auto_link() -> LaptopLink:
     """Try to discover+link the laptop (Q5 A). Returns link (linked or not)."""
     link = LaptopLink()
-    # try configured host, then common LAN gateways
-    hosts = [CFG.laptop_host.replace("http://", "").split(":")[0], "192.168.1.1",
-             "192.168.0.1", "10.0.0.1"]
+    # try configured host first, then mDNS discovery (not hardcoded router IPs)
+    hosts = [CFG.laptop_host.replace("http://", "").split(":")[0]]
     for h in hosts:
         if link.connect(host=h):
             return link

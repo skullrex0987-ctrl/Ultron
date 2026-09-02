@@ -9,8 +9,8 @@ import subprocess
 import xml.etree.ElementTree as ET
 from typing import Optional
 
-from config import CFG
-from audit import log
+from core.config import CFG
+from core.audit import log
 
 
 class AndroidControl:
@@ -85,12 +85,14 @@ class AndroidControl:
 
     def dump_ui(self) -> Optional[ET.Element]:
         """Mode C: UiAutomator node tree (accessibility). Robust, no OCR."""
+        import tempfile
+        local_ui = os.path.join(tempfile.gettempdir(), "ultron_ui.xml")
         r = self._adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
         if r.returncode != 0:
             return None
-        self._adb("pull", "/sdcard/ui.xml", "/tmp/ui.xml")
+        self._adb("pull", "/sdcard/ui.xml", local_ui)
         try:
-            return ET.parse("/tmp/ui.xml").getroot()
+            return ET.parse(local_ui).getroot()
         except Exception:
             return None
 

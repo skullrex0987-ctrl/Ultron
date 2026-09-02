@@ -10,12 +10,12 @@ from __future__ import annotations
 import os
 from typing import Callable, Optional
 
-from config import CFG
-from audit import log, transcript
-from ollama_client import BrainClient
-from tools import dispatch, format_reply
-from android_control import AndroidControl
-from perception import perceive
+from core.config import CFG
+from core.audit import log, transcript
+from core.ollama_client import BrainClient
+from core.tools import dispatch, format_reply
+from core.android_control import AndroidControl
+from core.perception import perceive
 
 
 class KillSwitch(Exception):
@@ -185,7 +185,7 @@ class Agent:
                 if app:
                     self.android.launch(app)
                     history.append(f"launched {app} after find failed")
-                    re = dispatch({"tool": "adb", "args": {"cmd": call["args"]["cmd"]}},
+                    re = dispatch({"tool": "adb", "args": {"cmd": call.get("args", {}).get("cmd", "")}},
                                   android=self.android)
                     ok = re.get("ok", False)
                     results.append({"step": i, "retry": "launch+" + app, "res": re})

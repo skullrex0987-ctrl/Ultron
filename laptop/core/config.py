@@ -28,29 +28,29 @@ class Config:
     # --- STT / TTS ---
     stt_engine: str = "vosk"          # laptop STT is browser-side; this is for headless CLI use
     tts_engine: str = "browser"       # browser SpeechSynthesis on laptop; piper on phone
-    vosk_model_dir: str = field(default_factory=lambda: os.getenv("JARVIS_VOSK", "/root/models/vosk"))
+    vosk_model_dir: str = field(default_factory=lambda: os.getenv("ULTRON_VOSK", os.path.expanduser("~/models/vosk")))
     hin_model: str = "vosk-model-small-hi-0.22"
     en_model: str = "vosk-model-small-en-us-0.15"
 
     # --- Device control (no-root phone) ---
-    adb_host: str = field(default_factory=lambda: os.getenv("JARVIS_ADB_HOST", "127.0.0.1"))
-    adb_port: int = field(default_factory=lambda: int(os.getenv("JARVIS_ADB_PORT", "5555")))
+    adb_host: str = field(default_factory=lambda: os.getenv("ULTRON_ADB_HOST", "127.0.0.1"))
+    adb_port: int = field(default_factory=lambda: int(os.getenv("ULTRON_ADB_PORT", "5555")))
     use_accessibility: bool = True     # UiAutomator node-tree perception available
 
     # --- Link / mesh ---
-    bridge_host: str = field(default_factory=lambda: os.getenv("JARVIS_BRIDGE_HOST", "0.0.0.0"))
-    bridge_port: int = field(default_factory=lambda: int(os.getenv("JARVIS_BRIDGE_PORT", "8765")))
-    pair_code: str = field(default_factory=lambda: os.getenv("JARVIS_PAIR_CODE", "ultron"))
+    bridge_host: str = field(default_factory=lambda: os.getenv("ULTRON_BRIDGE_HOST", "0.0.0.0"))
+    bridge_port: int = field(default_factory=lambda: int(os.getenv("ULTRON_BRIDGE_PORT", "8765")))
+    pair_code: str = field(default_factory=lambda: os.getenv("ULTRON_PAIR_CODE", "ultron"))
     device_name: str = "laptop-main"
 
     # --- Safety ---
     auto_execute: bool = True          # full auto (Q17/21 C)
     require_step_prompt: bool = True   # MUST ask user for step count before autonomous task
-    kill_switch_file: str = field(default_factory=lambda: os.getenv("JARVIS_KILL", "/tmp/ultron_kill"))
+    kill_switch_file: str = field(default_factory=lambda: os.getenv("ULTRON_KILL", os.path.expanduser("~/ultron_kill")))
     max_step_hard_cap: int = 200       # absolute ceiling even if user asks for more
 
     # --- Logging ---
-    audit_log: str = field(default_factory=lambda: os.getenv("JARVIS_AUDIT", "/root/jarvis-ultron/laptop/core/audit.jsonl"))
+    audit_log: str = field(default_factory=lambda: os.getenv("ULTRON_AUDIT", os.path.expanduser("~/ultron/audit.jsonl")))
 
     # --- Network discovery ---
     mdns_service: str = "_ultron._tcp.local."

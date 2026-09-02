@@ -27,7 +27,7 @@ from typing import Callable, Optional
 
 def log(side: str, data: dict):
     try:
-        from config import CFG
+        from core.config import CFG
         with open(CFG.audit_log, "a", encoding="utf-8") as f:
             f.write(__import__("json").dumps({"side": side, **data}) + "\n")
     except Exception:
@@ -138,10 +138,10 @@ class HealthWatch:
     def add(self, label: str, check: Callable[[], bool], recover: Optional[Callable[[], None]] = None):
         self.checks.append((label, check, recover))
 
-    def _state(self, s: str, detail: str = ""):
+    def _state(self, label: str, s: str, detail: str = ""):
         if self.on_state:
             try:
-                self.on_state(s, detail)
+                self.on_state(label, s, detail)
             except Exception:
                 pass
 
@@ -153,7 +153,7 @@ class HealthWatch:
                 ok = False
                 log("selfheal", {"event": "check-error", "label": label, "err": str(e)[:160]})
             if not ok:
-                self._state("recovering", f"{label} down")
+                self._state(label, "recovering", f"{label} down")
                 log("selfheal", {"event": "unhealthy", "label": label})
                 if recover:
                     try:

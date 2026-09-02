@@ -5,7 +5,7 @@ import time
 import threading
 from typing import Any
 
-from config import CFG
+from core.config import CFG
 
 _subs: list = []
 _lock = threading.Lock()

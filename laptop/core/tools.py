@@ -9,12 +9,14 @@ import subprocess
 import urllib.request
 from typing import Callable, Optional
 
-from config import CFG
-from audit import log
+from core.config import CFG
+from core.audit import log
 
 # Commands that require an explicit confirm even in auto mode
 DESTRUCTIVE = ("rm -rf", "mkfs", "dd if=", "format", "shutdown", "reboot",
-               ">: /", "chmod -R", "curl | sh", "wget | sh")
+               ">: /", "chmod -R", "curl | sh", "wget | sh",
+               "del /s /q", "rd /s /q", "format c:", "format C:",
+               "rm -fr", "rm -r -f", "shred", "rmdir /s /q")
 
 
 def _needs_confirm(cmd: str) -> bool:

@@ -24,13 +24,13 @@ try:
 except Exception:  # pragma: no cover
     _HAVE_WS = False
 
-from config import CFG
-from audit import log, transcript
-from ollama_client import BrainClient
-from agent import Agent, KillSwitch
-from bridge import Bridge, start_bridge_in_thread, get_local_ip
-import selfheal
-from selfheal import Supervisor, HealthWatch, check_ollama, ensure_vosk_model, pull_ollama
+from core.config import CFG
+from core.audit import log, transcript
+from core.ollama_client import BrainClient
+from core.agent import Agent, KillSwitch
+from core.bridge import Bridge, start_bridge_in_thread, get_local_ip
+import core.selfheal as selfheal
+from core.selfheal import Supervisor, HealthWatch, check_ollama, ensure_vosk_model, pull_ollama
 
 
 class Core:
@@ -156,7 +156,7 @@ class Core:
             await asyncio.sleep(0.12)
         await self._send_hud({"type": "audio", "level": 0.0})
 
-    async def _prompt_steps(self, q: str) -> str:
+    def _prompt_steps(self, q: str) -> str:
         # In the HUD this would pop a box; headless we log + use default cap.
         log("core", {"event": "step-prompt", "q": q})
         return str(CFG.max_step_hard_cap)
@@ -202,8 +202,8 @@ class Core:
             await asyncio.Future()
 
     def run(self):
-        start_bridge_in_thread(self.bridge)
         self.bridge.on_message = self._on_mesh
+        start_bridge_in_thread(self.bridge)
         log("core", {"event": "start", "brain": CFG.main_model,
                      "qr": self.bridge.qr_payload(),
                      "ip": get_local_ip()})
