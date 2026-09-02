@@ -1,133 +1,6 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>U.L.T.R.O.N. — Orb</title>
-<style>
-  :root { --amber:#ffaa30; --hot:#ffcc66; --ice:#66ccff; --ok:#66ff99; --bad:#ff5566; }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { height:100%; background:#000; overflow:hidden;
-    font-family:'Courier New',monospace; color:var(--amber); -webkit-tap-highlight-color:transparent; }
-  #orb { position:fixed; inset:0; }
-  .hud { position:fixed; z-index:5; text-shadow:0 0 10px rgba(255,170,48,.85);
-    user-select:none; pointer-events:none; letter-spacing:.12em; }
-  .title { top:16px; left:18px; font-size:14px; letter-spacing:.38em; }
-  .title::after { content:""; display:block; margin-top:7px; width:130px; height:1px;
-    background:linear-gradient(to right,var(--amber),transparent); }
-  .status { top:16px; right:18px; font-size:11px; display:flex; align-items:center; gap:8px; }
-  .dot { width:10px; height:10px; border-radius:50%; background:#553300; box-shadow:0 0 6px #553300; }
-  .dot.listen { background:var(--hot); box-shadow:0 0 12px var(--hot); }
-  .dot.think  { background:var(--ice); box-shadow:0 0 12px var(--ice); animation:pulse 1s infinite; }
-  .dot.speak  { background:var(--ok); box-shadow:0 0 12px var(--ok); }
-  .dot.off    { background:var(--bad); box-shadow:0 0 12px var(--bad); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .link { top:34px; right:18px; font-size:9px; opacity:.75; }
-  .link.ok { color:var(--ok); opacity:1; }
-  .link.bad { color:var(--bad); opacity:1; }
-  .gest { top:52px; right:18px; font-size:10px; color:var(--hot); }
-  .fx { top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px;
-    letter-spacing:.35em; color:var(--hot); opacity:0; transition:opacity .45s;
-    text-align:center; z-index:10; }
-  .tr { position:fixed; left:18px; bottom:110px; max-width:92vw; font-size:11px;
-    line-height:1.5; text-shadow:0 0 8px rgba(255,170,48,.6); z-index:5; pointer-events:none; }
-  .hint { position:fixed; left:18px; bottom:16px; font-size:9px; opacity:.55; z-index:5; pointer-events:none; }
-  .controls { position:fixed; right:16px; bottom:16px; display:flex; gap:8px; z-index:6; }
-  button { background:rgba(20,10,0,.6); border:1px solid var(--amber); color:var(--amber);
-    font-family:inherit; padding:11px 15px; border-radius:6px; font-size:12px; letter-spacing:.08em;
-    backdrop-filter:blur(2px); text-shadow:0 0 6px rgba(255,170,48,.7); cursor:pointer; }
-  button.on { background:rgba(120,60,0,.75); border-color:var(--hot); color:var(--hot); }
-  button.sm { padding:8px 10px; font-size:10px; }
-  #cam { position:fixed; right:14px; bottom:70px; width:170px; height:128px; z-index:6;
-    border:1px solid rgba(255,170,48,.4); border-radius:8px; object-fit:cover; transform:scaleX(-1);
-    filter:sepia(1) hue-rotate(-15deg) saturate(2.2) brightness(.8); display:none; }
-  #ovl { position:fixed; right:14px; bottom:70px; width:170px; height:128px; z-index:7; display:none; pointer-events:none; }
-  .grain { position:fixed; inset:0; z-index:8; pointer-events:none; opacity:.06; mix-blend-mode:screen;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  .scan { position:fixed; inset:0; z-index:9; pointer-events:none; opacity:.22;
-    background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.25) 2px,rgba(0,0,0,.25) 4px); }
-  .vig { position:fixed; inset:0; z-index:7; pointer-events:none;
-    background:radial-gradient(ellipse at center,transparent 38%,rgba(0,0,0,.72)); }
-  /* settings sheet */
-  #cfg { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.92); display:none;
-    align-items:center; justify-content:center; }
-  #cfg .card { width:min(420px,92vw); border:1px solid var(--amber); border-radius:10px;
-    background:rgba(20,10,0,.95); padding:22px; }
-  #cfg h2 { font-size:13px; letter-spacing:.3em; margin-bottom:16px; color:var(--hot); }
-  #cfg label { display:block; font-size:10px; opacity:.8; margin:12px 0 4px; letter-spacing:.15em; }
-  #cfg input { width:100%; background:#000; border:1px solid var(--amber); color:var(--hot);
-    font-family:inherit; font-size:13px; padding:10px; border-radius:6px; }
-  #cfg .row { display:flex; gap:8px; margin-top:18px; justify-content:flex-end; }
-  #boot { position:fixed; inset:0; z-index:30; background:#000; display:flex;
-    align-items:center; justify-content:center; font-size:12px; letter-spacing:.4em; color:var(--amber); }
-</style>
-</head>
-<body>
-  <div id="orb"></div>
-  <div class="grain"></div><div class="scan"></div><div class="vig"></div>
-  <div class="hud title">U.L.T.R.O.N. ORB</div>
-  <div class="hud status"><span id="dot" class="dot"></span><span id="st">BOOT</span></div>
-  <div class="hud link" id="lnk">LINK: —</div>
-  <div class="hud gest" id="gst">GESTURE: —</div>
-  <div class="hud fx" id="fx"></div>
-  <div class="tr" id="tr"></div>
-  <div class="hint">PINCH talk · OPEN-PALM listen · PEACE shot · THUMBS vol · SWIPE nav · 2-HAND zoom · ⚙ settings</div>
-  <video id="cam" playsinline muted></video>
-  <canvas id="ovl" width="170" height="128"></canvas>
-  <div class="controls">
-    <button id="c" class="sm">⚙</button>
-    <button id="g">GESTURES</button>
-    <button id="t">TALK</button>
-  </div>
 
-  <div id="cfg">
-    <div class="card">
-      <h2>SETTINGS</h2>
-      <label>ULTRON AGENT (Termux) — ws://IP:8081</label>
-      <input id="cfg-url" placeholder="ws://127.0.0.1:8081" />
-      <label>VOICE REACTIVITY (mic drives the orb)</label>
-      <input id="cfg-mic" placeholder="on / off" />
-      <div class="row">
-        <button id="cfg-x" class="sm">CANCEL</button>
-        <button id="cfg-s" class="sm">SAVE</button>
-      </div>
-    </div>
-  </div>
-  <div id="boot">U.L.T.R.O.N.</div>
-
-<script>
-  // SAFETY NET (plain script — runs even if the module below fails entirely).
-  // Clears the splash no matter what, and shows a visible error if the orb
-  // engine failed to boot (instead of a frozen U.L.T.R.O.N. screen).
-  window.addEventListener("error", function (e) {
-    var b = document.getElementById("boot");
-    if (b) {
-      b.style.letterSpacing = "0.1em";
-      b.style.fontSize = "11px";
-      b.style.color = "#ff5566";
-      b.style.padding = "0 20px";
-      b.style.textAlign = "center";
-      b.textContent = "ORB ERROR: " + (e && e.message ? e.message : "unknown");
-      setTimeout(function () { b.remove(); }, 6000);
-    }
-  });
-  setTimeout(function () {
-    var b = document.getElementById("boot");
-    if (b) b.remove();   // hard fallback: never stay stuck on the splash
-  }, 5000);
-</script>
-
-<script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/js/three.module.js",
-    "@mediapipe/tasks-vision": "./vendor/js/vision_bundle.mjs"
-  }
-}
-</script>
-<script type="module">
-import * as THREE from "three";
-import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import THREE from "file:///C:/Users/ranra/projects/Ultron/phone/orb-apk/_check/_gen/three_stub.mjs";
+import { HandLandmarker, FilesetResolver } from "file:///C:/Users/ranra/projects/Ultron/phone/orb-apk/www/vendor/js/vision_bundle.mjs";
 
 /* ============================== SETTINGS ============================== */
 const S = {
@@ -163,10 +36,10 @@ ren.toneMapping=THREE.ACESFilmicToneMapping; ren.toneMappingExposure=0.9;
 document.getElementById("orb").appendChild(ren.domElement);
 
 // post-processing — all local (vendored addons, no CDN)
-const {EffectComposer} = await import("./vendor/js/postprocessing/EffectComposer.js");
-const {RenderPass}     = await import("./vendor/js/postprocessing/RenderPass.js");
-const {UnrealBloomPass}= await import("./vendor/js/postprocessing/UnrealBloomPass.js");
-const {ShaderPass}     = await import("./vendor/js/postprocessing/ShaderPass.js");
+const {EffectComposer} = await import("file:///C:/Users/ranra/projects/Ultron/phone/orb-apk/_check/_gen/post/EffectComposer.js");
+const {RenderPass}     = await import("file:///C:/Users/ranra/projects/Ultron/phone/orb-apk/_check/_gen/post/RenderPass.js");
+const {UnrealBloomPass}= await import("file:///C:/Users/ranra/projects/Ultron/phone/orb-apk/_check/_gen/post/UnrealBloomPass.js");
+const {ShaderPass}     = await import("file:///C:/Users/ranra/projects/Ultron/phone/orb-apk/_check/_gen/post/ShaderPass.js");
 const composer=new EffectComposer(ren); composer.addPass(new RenderPass(scene,cam));
 const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.9,0.5,0.18); composer.addPass(bloom);
 const chrom=new ShaderPass({uniforms:{tDiffuse:{value:null},uTime:{value:0}},
@@ -235,7 +108,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
   const sy=Math.sin(t*0.4)*R1; sr.position.y=sy; const ss=Math.sqrt(Math.max(0,R1*R1-sy*sy))/R1;
   sr.scale.set(ss,ss,1); sr.material.opacity=0.2*ss;
   bloom.strength=1.7+Math.sin(t*0.8)*0.3+(state==='speak'?micLevel*1.4:0);
-  chrom.uniforms.uTime.value=t; composer.render();}
+  chrom.uniforms.uTime.value=t; ;}
 animate();
 
 /* ============================== MIC (audio-reactive orb) ============================== */
@@ -390,6 +263,3 @@ try{ if(navigator.wakeLock){ navigator.wakeLock.request("screen").catch(()=>{});
 
 addEventListener("resize",()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
   ren.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
-</script>
-</body>
-</html>
