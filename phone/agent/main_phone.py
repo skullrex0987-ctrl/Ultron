@@ -149,7 +149,7 @@ class PhoneAgent:
 
     def run_task(self, goal: str, steps: int) -> dict:
         self.android.ensure()
-        log = []
+        step_log = []  # renamed: was `log`, which shadowed the module-level log() fn
         last_sources: list = []
         for i in range(steps):
             self._check_kill()
@@ -169,17 +169,17 @@ class PhoneAgent:
                 txt = format_reply(call.get("args", {}).get("text", ""))
                 if last_sources and "Sources:" not in txt:
                     txt = txt + "\n\nSources:\n" + "\n".join(f"- {s}" for s in last_sources)
-                log.append({"reply": txt})
+                step_log.append({"reply": txt})
                 self._speak(txt)
                 self._send_hud_sync({"type": "transcript", "who": "ultron", "text": txt})
                 break
             res = dispatch(call, self.ctrl)
             if tool == "research" and res.get("sources"):
                 last_sources = list(res.get("sources") or [])
-            log.append({"tool": tool, "res": res})
+            step_log.append({"tool": tool, "res": res})
             if tool == "adb" and not res.get("ok") and "not-found" in str(res.get("reason", "")):
                 break
-        return {"goal": goal, "steps": len(log), "log": log}
+        return {"goal": goal, "steps": len(step_log), "log": step_log}
 
     def _perceive(self) -> dict:
         root = self.android.dump_ui()
