@@ -29,8 +29,15 @@
   .fx { top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px;
     letter-spacing:.35em; color:var(--hot); opacity:0; transition:opacity .45s;
     text-align:center; z-index:10; }
-  .tr { position:fixed; left:18px; bottom:110px; max-width:92vw; font-size:11px;
-    line-height:1.5; text-shadow:0 0 8px rgba(255,170,48,.6); z-index:5; pointer-events:none; }
+  .tr { position:fixed; left:18px; bottom:150px; max-width:92vw; font-size:11px;
+    line-height:1.5; text-shadow:0 0 8px rgba(255,170,48,.6); z-index:5; pointer-events:none;
+    max-height:34vh; overflow:hidden; }
+  #cmd { position:fixed; left:16px; right:110px; bottom:86px; z-index:6; display:flex; gap:8px; }
+  #cmd input { flex:1; background:rgba(20,10,0,.65); border:1px solid var(--amber);
+    color:var(--hot); font-family:inherit; font-size:12px; padding:10px 12px;
+    border-radius:6px; letter-spacing:.05em; }
+  #cmd input::placeholder { color:rgba(255,204,102,.4); }
+  #cmd button { padding:10px 14px; }
   .hint { position:fixed; left:18px; bottom:16px; font-size:9px; opacity:.55; z-index:5; pointer-events:none; }
   .controls { position:fixed; right:16px; bottom:16px; display:flex; gap:8px; z-index:6; }
   button { background:rgba(20,10,0,.6); border:1px solid var(--amber); color:var(--amber);
@@ -71,6 +78,10 @@
   <div class="hud gest" id="gst">GESTURE: —</div>
   <div class="hud fx" id="fx"></div>
   <div class="tr" id="tr"></div>
+  <div id="cmd">
+    <input id="cmdIn" placeholder="type a command for ULTRON…" autocomplete="off" />
+    <button id="cmdGo">RUN</button>
+  </div>
   <div class="hint">PINCH talk · OPEN-PALM listen · PEACE shot · THUMBS vol · SWIPE nav · 2-HAND zoom · ⚙ settings</div>
   <video id="cam" playsinline muted></video>
   <canvas id="ovl" width="170" height="128"></canvas>
@@ -379,6 +390,26 @@ function send(m){ if(ws && ws.readyState===1) ws.send(JSON.stringify(m)); }
 
 /* buttons */
 document.getElementById("t").onclick=()=>{ send({type:"talk"}); state="listen"; };
+/* typed command box — full agent control without voice */
+const cmdIn=document.getElementById("cmdIn"), cmdGo=document.getElementById("cmdGo");
+function runCmd(){
+  const text=(cmdIn.value||"").trim(); if(!text) return;
+  if(ws && ws.readyState===1){
+    send({type:"transcript", text});
+    const t=document.getElementById("tr");
+    const div=document.createElement("div");
+    div.textContent="YOU: "+text;
+    t.appendChild(div); t.scrollTop=t.scrollHeight;
+    cmdIn.value=""; cmdIn.blur();
+  } else {
+    const t=document.getElementById("tr");
+    const div=document.createElement("div");
+    div.textContent="LINK DOWN — start the agent first (Termux: ultron start), then ⚙ check ws://127.0.0.1:8081";
+    t.appendChild(div); t.scrollTop=t.scrollHeight;
+  }
+}
+cmdGo.onclick=runCmd;
+cmdIn.addEventListener("keydown",e=>{ if(e.key==="Enter") runCmd(); });
 document.getElementById("g").onclick=async function(){
   if(gOn){ gOn=false; this.classList.remove("on"); video.style.display="none"; ovl.style.display="none"; }
   else{ this.classList.add("on"); try{ await startG(); }

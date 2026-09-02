@@ -32,11 +32,25 @@ else
   git clone -q --depth 1 https://github.com/skullrex0987-ctrl/Ultron.git "$HOME/ultron" && ok "cloned to ~/ultron" || fail "clone — check network"
 fi
 
-step 3/7 "Python deps"
+step 3/7 "Python deps (vosk/numpy optional per-Python availability)"
 pip install -q --upgrade pip >/dev/null 2>&1 || true
-pip install -q websockets fastapi uvicorn vosk pillow numpy >/dev/null 2>&1 \
-  || pip install websockets fastapi uvicorn vosk pillow numpy
-ok "websockets fastapi uvicorn vosk pillow numpy"
+# REQUIRED: agent core — abort-worthy if missing
+if pip install -q websockets >/dev/null 2>&1; then ok "websockets"; else
+  fail "websockets (REQUIRED — the agent cannot run without it)"; exit 1; fi
+# OPTIONAL: each degrades gracefully if unavailable on this Python version
+for p in fastapi uvicorn pillow numpy vosk; do
+  if pip install -q "$p" >/dev/null 2>&1; then ok "$p"
+  else echo "   (skip $p — no wheel for this Python; feature disabled, install continues)"; fi
+done
+python - <<'PY' 2>/dev/null || true
+try:
+    import vosk  # noqa
+    print("   voice: vosk OK — wake word + speech enabled")
+except Exception:
+    print("   NOTE: vosk unavailable on this Python -> VOICE INPUT OFF.")
+    print("   The agent + orb still work fully: TYPE commands in the orb's")
+    print("   text box (bottom-left). Retry 'vosk' later once a wheel ships.")
+PY
 
 step 4/7 "Ollama + mini brain qwen3.5:0.8b"
 if ! command -v ollama >/dev/null 2>&1; then

@@ -138,6 +138,8 @@ global.performance = global.performance || { now: () => Date.now() };
   // wiring sanity: buttons got handlers, splash-safety exists in HTML
   if (!els["g"] || typeof els["g"].onclick !== "function") bad("GESTURES button never wired (module died before wiring?)");
   if (!els["t"] || typeof els["t"].onclick !== "function") bad("TALK button never wired");
+  if (!els["cmdGo"] || typeof els["cmdGo"].onclick !== "function") bad("cmd RUN button never wired");
+  if (!els["cmdIn"] || typeof els["cmdIn"].addEventListener !== "function") bad("cmd input never wired");
   if (!els["cfg-s"] || typeof els["cfg-s"].onclick !== "function") bad("settings SAVE never wired");
   if (!els["fx"]) bad("fx element missing");
   console.log(fail ? "== RESULT: FAIL(" + fail + ") ==" : "== RESULT: ALL GREEN ==");
