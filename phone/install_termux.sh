@@ -32,14 +32,22 @@ else
   git clone -q --depth 1 https://github.com/skullrex0987-ctrl/Ultron.git "$HOME/ultron" && ok "cloned to ~/ultron" || fail "clone — check network"
 fi
 
-step 3/7 "Python deps (vosk/numpy optional per-Python availability)"
-pip install -q --upgrade pip >/dev/null 2>&1 || true
+step 3/7 "Python deps (progress shown; optional pkgs skip gracefully)"
+# NOTE: no 'pip install --upgrade pip' here — it downloads a whole new pip
+# before doing anything useful (the #1 cause of 'stuck at websockets').
+pip config set global.progress_bar off >/dev/null 2>&1 || true
 # REQUIRED: agent core — abort-worthy if missing
-if pip install -q websockets >/dev/null 2>&1; then ok "websockets"; else
-  fail "websockets (REQUIRED — the agent cannot run without it)"; exit 1; fi
+echo "   installing websockets (the only required one)…"
+if pip install --no-cache-dir websockets >/dev/null 2>&1; then ok "websockets"
+else
+  echo "   retrying via pkg (python-websockets)…"
+  pkg install -y python-websockets >/dev/null 2>&1 && ok "websockets (pkg)" || {
+    fail "websockets (REQUIRED — the agent cannot run without it)"; exit 1; }
+fi
 # OPTIONAL: each degrades gracefully if unavailable on this Python version
 for p in fastapi uvicorn pillow numpy vosk; do
-  if pip install -q "$p" >/dev/null 2>&1; then ok "$p"
+  if python -c "import $p" >/dev/null 2>&1; then ok "$p (already present)"; continue; fi
+  if pip install --no-cache-dir --timeout 60 "$p" >/dev/null 2>&1; then ok "$p"
   else echo "   (skip $p — no wheel for this Python; feature disabled, install continues)"; fi
 done
 python - <<'PY' 2>/dev/null || true
