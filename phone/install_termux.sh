@@ -32,14 +32,13 @@ else
   git clone -q --depth 1 https://github.com/skullrex0987-ctrl/Ultron.git "$HOME/ultron" && ok "cloned to ~/ultron" || fail "clone — check network"
 fi
 
-step 3/7 "Python deps (all required packages with live progress)"
+step 3/7 "Python deps (live pip progress; vosk via Android aar)"
 # NOTE: no 'pip install --upgrade pip' here — it downloads a whole new pip
 # before doing anything useful (the #1 cause of 'stuck at websockets').
 # REQUIRED: agent core — abort-worthy if missing. pip runs UNsilenced so the
 # user sees the live download bar; a watchdog pings every 15s so it never
 # looks frozen while pip is quietly resolving.
 pipws() {
-  # 15s watchdog keeps printing so a slow network never looks frozen
   ( while sleep 15; do echo "   …still working (pip resolving/downloading — slow networks take minutes) [$(date +%H:%M:%S)]"; done ) &
   local WD=$!
   pip install --no-cache-dir --timeout 120 --retries 3 websockets
@@ -55,43 +54,69 @@ else
     fail "websockets (REQUIRED — the agent cannot run without it)"; exit 1; }
 fi
 
-# BUILD VOSK FROM SOURCE (required for wake word detection)
-# Since Rust/Cargo are installed in step 1, we can build vosk from source
-# This handles Python versions without pre-built wheels (like Python 3.14)
-step 3a "Building VOSK from source (required for wake word detection)"
-echo "   Building vosk from source (this may take several minutes)..."
-# Install build dependencies for vosk
-pkg install -y python-dev clang make cmake >/dev/null 2>&1 || true
-pipws_vosk() {
-  ( while sleep 15; do echo "   …still building vosk (this takes several minutes) [$(date +%H:%M:%S)]"; done ) &
-  local WD=$!
-  pip install --no-cache-dir --timeout 300 --retries 3 vosk
-  local RC=$?
-  kill $WD 2>/dev/null
-  return $RC
+# ---- VOSK: no Termux wheel exists (PyPI ships glibc wheels only; Termux is
+# Bionic). Proven community method: install the pure-Python part from PyPI,
+# then replace libvosk.so with the Bionic-built one from the OFFICIAL
+# Android build (com.alphacephei:vosk-android aar on Maven Central).
+install_vosk() {
+  # 1) pure-Python wrapper: use the linux_aarch64 wheel with --platform so
+  # pip accepts it (it only carries python code; the .so gets replaced next)
+  VOSK_WHEEL="https://files.pythonhosted.org/packages/source/v/vosk/vosk-0.3.45.tar.gz"
+  # prefer the universal sdist (pure python + setup.py)
+  if ! pip install --no-cache-dir --timeout 120 vosk 2>/dev/null; then
+    # newer pip refuses sdist? try explicit version pin
+    pip install --no-cache-dir --timeout 120 "vosk==0.3.45" 2>/dev/null || return 1
+  fi
+  # 2) locate the installed vosk package dir
+  VOSK_DIR="$(python - <<'PY'
+import vosk, os
+print(os.path.dirname(vosk.__file__))
+PY
+)" 2>/dev/null || return 1
+  [ -n "$VOSK_DIR" ] && [ -d "$VOSK_DIR" ] || return 1
+  # 3) fetch official Android aar and extract the Bionic libvosk.so (arm64)
+  echo "   fetching official Android libvosk.so (arm64, ~12MB)…"
+  AAR_URL="https://repo1.maven.org/maven2/com/alphacephei/vosk-android/0.3.47/vosk-android-0.3.47.aar"
+  TMPD="$(mktemp -d)"
+  curl -fsSL --retry 2 -o "$TMPD/vosk.aar" "$AAR_URL" || { rm -rf "$TMPD"; return 1; }
+  unzip -p "$TMPD/vosk.aar" jni/arm64-v8a/libvosk.so > "$TMPD/libvosk.so" 2>/dev/null || { rm -rf "$TMPD"; return 1; }
+  [ -s "$TMPD/libvosk.so" ] || { rm -rf "$TMPD"; return 1; }
+  # 4) swap it in
+  cp "$TMPD/libvosk.so" "$VOSK_DIR/libvosk.so" || { rm -rf "$TMPD"; return 1; }
+  rm -rf "$TMPD"
+  # 5) verify import works
+  python -c "import vosk; vosk.Model" >/dev/null 2>&1 || return 1
+  return 0
 }
-if python -c "import vosk" >/dev/null 2>&1; then ok "vosk (already present)"
-elif pipws_vosk; then ok "vosk (built from source)"
+
+echo "   installing vosk (Android-native method)…"
+( while sleep 20; do echo "   …vosk install in progress [$(date +%H:%M:%S)]"; done ) &
+WD=$!
+if python -c "import vosk" >/dev/null 2>&1; then kill $WD 2>/dev/null; ok "vosk (already present)"
+elif install_vosk; then kill $WD 2>/dev/null; ok "vosk (Android aar method)"
 else
-  echo "   WARNING: vosk build failed - wake word detection will be unavailable"
-  echo "   You can still use the text command box in the Orb app"
+  kill $WD 2>/dev/null
+  echo "   vosk unavailable -> voice input OFF; text command box still fully works"
 fi
 
-# REQUIRED PACKAGES (no longer optional - install everything)
-echo "   Installing required packages..."
-for p in fastapi uvicorn pillow numpy piper-tts; do
+# ---- REST: required for full functionality ----
+for p in fastapi uvicorn piper-tts; do
   if python -c "import $p" >/dev/null 2>&1; then ok "$p (already present)"; continue; fi
-  echo "   installing $p..."
-  if pip install --no-cache-dir --timeout 60 --retries 2 "$p" >/dev/null 2>&1; then ok "$p"
-  else echo "   WARNING: $p install failed (will retry on next run)"; fi
+  echo "   installing $p…"
+  ( while sleep 15; do echo "   …$p still downloading [$(date +%H:%M:%S)]"; done ) &
+  WD=$!
+  if pip install --no-cache-dir --timeout 120 --retries 3 "$p" >/dev/null 2>&1; then kill $WD 2>/dev/null; ok "$p"
+  else kill $WD 2>/dev/null; echo "   WARNING: $p failed — retry next run, feature degrades"; fi
 done
 
-# Verify sounddevice is available for voice input
+# sounddevice (mic capture) — needs portaudio
 if python -c "import sounddevice" >/dev/null 2>&1; then ok "sounddevice (already present)"
 else
-  echo "   installing sounddevice..."
-  if pip install --no-cache-dir --timeout 60 --retries 2 sounddevice >/dev/null 2>&1; then ok "sounddevice"
-  else echo "   WARNING: sounddevice install failed"; fi
+  pkg install -y portaudio >/dev/null 2>&1 || true
+  ( while sleep 15; do echo "   …sounddevice still downloading [$(date +%H:%M:%S)]"; done ) &
+  WD=$!
+  if pip install --no-cache-dir --timeout 120 --retries 3 sounddevice >/dev/null 2>&1; then kill $WD 2>/dev/null; ok "sounddevice"
+  else kill $WD 2>/dev/null; echo "   WARNING: sounddevice failed — voice input needs it"; fi
 fi
 
 python - <<'PY' 2>/dev/null || true
@@ -99,11 +124,10 @@ try:
     import vosk  # noqa
     print("   voice: vosk OK — wake word + speech enabled")
 except Exception:
-    print("   NOTE: vosk unavailable on this Python -> VOICE INPUT OFF.")
+    print("   NOTE: vosk unavailable -> VOICE INPUT OFF.")
     print("   The agent + orb still work fully: TYPE commands in the orb's")
-    print("   text box (bottom-left). Retry 'vosk' later once a wheel ships."
+    print("   text box (bottom-left).")
 PY
-
 step 4/7 "Ollama + mini brain qwen3.5:0.8b"
 if ! command -v ollama >/dev/null 2>&1; then
   curl -fsSL https://ollama.com/install.sh | bash && ok "ollama installed" || fail "ollama install"
