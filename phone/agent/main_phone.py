@@ -91,6 +91,8 @@ class PhoneAgent:
         self.hud_clients.add(ws)
         try:
             await ws.send(json.dumps({"type": "state", "state": "idle"}))
+            await ws.send(json.dumps({"type": "transcript", "who": "ultron",
+                                      "text": "ULTRON agent linked. Gestures + voice ready."}))
             async for raw in ws:
                 try:
                     m = json.loads(raw)
@@ -114,9 +116,33 @@ class PhoneAgent:
 
     def _on_gesture(self, action):
         if action == "talk":
-            self._handle_goal("")
+            self._send_hud_sync({"type": "transcript", "who": "ultron",
+                                 "text": "Listening… speak now."})
+            self._send_hud_sync({"type": "state", "state": "listening"})
         elif action == "screenshot":
-            self.android._adb("shell", "screencap", "/sdcard/shot.png")
+            r = self.android._adb("shell", "screencap", "-p", "/sdcard/ultron_shot.png")
+            if r.returncode == 0:
+                self._send_hud_sync({"type": "transcript", "who": "ultron",
+                                     "text": "Screenshot saved to /sdcard/ultron_shot.png"})
+        elif action == "volup":
+            self.android._adb("shell", "input", "keyevent", "24")
+            self._send_hud_sync({"type": "transcript", "who": "ultron",
+                                 "text": "Volume up."})
+        elif action == "voldown":
+            self.android._adb("shell", "input", "keyevent", "25")
+            self._send_hud_sync({"type": "transcript", "who": "ultron",
+                                 "text": "Volume down."})
+        elif action == "listen":
+            self._send_hud_sync({"type": "state", "state": "listening"})
+            self._send_hud_sync({"type": "transcript", "who": "ultron",
+                                 "text": "Voice capture on — say 'ultron' then a command."})
+        elif action == "prev":
+            self.android._adb("shell", "input", "keyevent", "88")  # media previous
+        elif action == "next":
+            self.android._adb("shell", "input", "keyevent", "87")  # media next
+        elif action == "zoom":
+            self._send_hud_sync({"type": "transcript", "who": "ultron",
+                                 "text": "Zoom acknowledged."})
 
     async def _handle_goal(self, text: str):
         if self.busy or not text:

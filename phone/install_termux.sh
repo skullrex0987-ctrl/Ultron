@@ -64,21 +64,48 @@ dl "vosk-model-small-en-us-0.15" "vosk-en"
 step 6/7 "Piper TTS (offline voice)"
 command -v piper >/dev/null 2>&1 && ok "piper present" || { pip install -q piper-tts >/dev/null 2>&1 && ok "piper-tts (pip)" || echo "   (optional — voice replies muted if absent)"; }
 
-step 7/7 "Done — NEXT STEPS"
+step 7/7 "ultron command + easy launcher"
+mkdir -p "$HOME/bin"
+cat > "$HOME/bin/ultron" <<'ULTRON_CMD'
+#!/usr/bin/env bash
+# ULTRON phone control: ultron start|stop|test|update|log
+U="$HOME/ultron/phone/agent"
+case "$1" in
+  start)  nohup python "$U/main_phone.py" > "$HOME/ultron_agent.log" 2>&1 &
+          sleep 2; pgrep -f main_phone.py >/dev/null && echo "✓ ULTRON agent running (:8081)" || { echo "✗ failed — see ~/ultron_agent.log"; exit 1; } ;;
+  stop)   pkill -f main_phone.py && echo "✓ stopped" || echo "(not running)" ;;
+  test)   python "$U/selftest_phone.py" ;;
+  update) (cd "$HOME/ultron" && git pull -q origin main) && echo "✓ updated" ;;
+  log)    tail -f "$HOME/ultron_agent.log" ;;
+  *)      echo "usage: ultron start|stop|test|update|log" ;;
+esac
+ULTRON_CMD
+chmod +x "$HOME/bin/ultron"
+grep -q 'export PATH="$HOME/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null || \
+  echo 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.bashrc"
+export PATH="$HOME/bin:$PATH"
+ok "run:  ultron start   (then ultron test / ultron log)"
+
+step 7/7 "done — DAILY USE"
 cat <<'EOF'
 
-  1. Wireless self-control (one-time, no root):
-       Settings > Developer options > Wireless debugging > ON
-       In Termux:  adb tcpip 5555   (via USB once)  OR use:
-                   adb connect 127.0.0.1:5555
-  2. Self-test (all should PASS):
-       cd ~/ultron/phone/agent && python selftest_phone.py
-  3. Launch the phone agent:
-       cd ~/ultron/phone/agent && python main_phone.py
-  4. Install the Orb app (APK):
-       github.com/skullrex0987-ctrl/Ultron/releases  (v1.1.0 universal)
-  5. Pair with laptop: set ULTRON_LAPTOP=http://<laptop-LAN-IP>:8765
-       (laptop IP shown by D:\ULTRON\START_ULTRON.bat)
+  DAILY USE (just these):
+    ultron start     # launch the agent (:8081)
+    ultron test      # self-test, all should PASS
+    ultron log       # live agent log
+    ultron stop      # stop it
+
+  Orb app: install ULTRON-Orb APK from GitHub releases, open it,
+  tap ⚙ and set the agent URL to:  ws://127.0.0.1:8081
+  (same phone = 127.0.0.1; gestures + voice now work fully offline)
+
+  One-time (wireless self-control, no root):
+    Settings > Developer options > Wireless debugging > ON
+    Termux:  adb tcpip 5555   then   ultron test
+
+  Pair with laptop (optional):
+    export ULTRON_LAPTOP=http://<laptop-LAN-IP>:8765
+    (laptop IP shown by D:\ULTRON\START_ULTRON.bat)
 
 EOF
-echo -e "${GREEN}Installer complete. Run the self-test next.${R}"
+echo -e "${GREEN}Installer complete. Run:  ultron start${R}"
