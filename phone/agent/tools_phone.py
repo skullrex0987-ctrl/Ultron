@@ -8,7 +8,13 @@ import urllib.request
 import urllib.parse as _uparse
 from typing import Optional
 
-from config_phone import CFG
+from agent.config_phone import CFG
+
+# Commands that require an explicit confirm even in auto mode (mirrors laptop)
+DESTRUCTIVE = ("rm -rf", "mkfs", "dd if=", "format", "shutdown", "reboot",
+               ">: /", "chmod -R", "curl | sh", "wget | sh",
+               "del /s /q", "rd /s /q", "format c:", "format C:",
+               "rm -fr", "rm -r -f", "shred", "rmdir /s /q")
 
 # ---- structured output formatting (mirror of laptop tools.format_reply) ----
 _THINK_RE = _re.compile(r"<think>.*?</think>", _re.DOTALL | _re.IGNORECASE)
@@ -67,6 +73,9 @@ def _ddg_links(html_text: str, limit: int = 4) -> list:
 
 
 def shell(cmd: str, confirm=None) -> dict:
+    if any(t in cmd for t in DESTRUCTIVE):
+        if not confirm or not confirm(cmd):
+            return {"ok": False, "reason": "blocked-destructive"}
     try:
         r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=120,
                            cwd=os.path.expanduser("~"))

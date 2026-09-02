@@ -9,8 +9,8 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
-from config import CFG
-from providers import build_provider, LLMProvider
+from core.config import CFG
+from core.providers import build_provider, LLMProvider
 
 SYSTEM_PROMPT = """You are ULTRON, a local autonomous agent. You have tools.
 When the user asks for an action, respond with a JSON tool call:
@@ -104,21 +104,25 @@ class BrainClient:
         self._using_cloud = False
 
     def chat(self, user_text: str, max_steps: int = 15) -> dict:
-        self.history.append(ChatMessage("user", user_text))
-        msgs = [{"role": m.role, "content": m.content} for m in self.history]
-        try:
-            raw = self.provider.chat(msgs)
-            self._using_cloud = False
-        except Exception:
-            # auto-reroute to cloud if available (Q10 B)
-            if self.cloud is not None:
-                raw = self.cloud.chat(msgs)
-                self._using_cloud = True
-            else:
-                raise
-        parsed = _clean(raw)
-        self.history.append(ChatMessage("assistant", raw))
-        return parsed
+            self.history.append(ChatMessage("user", user_text))
+            msgs = [{"role": m.role, "content": m.content} for m in self.history]
+            try:
+                raw = self.provider.chat(msgs)
+                self._using_cloud = False
+            except Exception:
+                # auto-reroute to cloud if available (Q10 B)
+                if self.cloud is not None:
+                    raw = self.cloud.chat(msgs)
+                    self._using_cloud = True
+                else:
+                    raise
+            parsed = _clean(raw)
+            # Store parsed content (tool call) instead of raw JSON output
+            self.history.append(ChatMessage("assistant", json.dumps(parsed)))
+            # Truncate history: keep system + last 10 user/assistant pairs (max 21 messages)
+            if len(self.history) > 21:
+                self.history = [self.history[0]] + self.history[-20:]
+            return parsed
 
     def health(self) -> bool:
         if self.provider.health():

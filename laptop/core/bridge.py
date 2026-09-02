@@ -16,8 +16,8 @@ import socket
 import uuid
 from typing import Optional, Callable
 
-from config import CFG
-from audit import log
+from core.config import CFG
+from core.audit import log
 
 
 def get_local_ip() -> str:
@@ -74,7 +74,11 @@ class Bridge:
                 raw = await reader.readline()
                 if not raw:
                     break
-                msg = json.loads(raw.decode().strip())
+                try:
+                    msg = json.loads(raw.decode().strip())
+                except json.JSONDecodeError:
+                    log("bridge", {"event": "json-decode-error", "raw": raw.decode()[:200]})
+                    continue
                 if self.on_message:
                     self.on_message(msg, peer_id)
         except Exception as e:  # noqa

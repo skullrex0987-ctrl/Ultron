@@ -88,6 +88,8 @@ class LLMProvider:
         if "message" in body:  # ollama
             return body["message"]["content"]
         if "choices" in body:  # openai-style
+            if not body["choices"]:
+                raise RuntimeError("empty choices array")
             return body["choices"][0]["message"]["content"]
         raise RuntimeError(f"unknown response: {str(body)[:200]}")
 
