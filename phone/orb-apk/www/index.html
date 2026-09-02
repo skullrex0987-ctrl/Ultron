@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>U.L.T.R.O.N. — Orb</title>
 <style>
-  :root { --amber:#ffaa30; --hot:#ffcc66; --ice:#66ccff; }
+  :root { --amber:#ffaa30; --hot:#ffcc66; --ice:#66ccff; --ok:#66ff99; --bad:#ff5566; }
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { height:100%; background:#000; overflow:hidden;
     font-family:'Courier New',monospace; color:var(--amber); -webkit-tap-highlight-color:transparent; }
@@ -19,10 +19,14 @@
   .dot { width:10px; height:10px; border-radius:50%; background:#553300; box-shadow:0 0 6px #553300; }
   .dot.listen { background:var(--hot); box-shadow:0 0 12px var(--hot); }
   .dot.think  { background:var(--ice); box-shadow:0 0 12px var(--ice); animation:pulse 1s infinite; }
-  .dot.speak  { background:#66ff99; box-shadow:0 0 12px #66ff99; }
+  .dot.speak  { background:var(--ok); box-shadow:0 0 12px var(--ok); }
+  .dot.off    { background:var(--bad); box-shadow:0 0 12px var(--bad); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .gest { top:46px; right:18px; font-size:10px; color:var(--hot); }
-  .tr { position:fixed; left:18px; bottom:84px; max-width:92vw; font-size:11px;
+  .link { top:34px; right:18px; font-size:9px; opacity:.75; }
+  .link.ok { color:var(--ok); opacity:1; }
+  .link.bad { color:var(--bad); opacity:1; }
+  .gest { top:52px; right:18px; font-size:10px; color:var(--hot); }
+  .tr { position:fixed; left:18px; bottom:110px; max-width:92vw; font-size:11px;
     line-height:1.5; text-shadow:0 0 8px rgba(255,170,48,.6); z-index:5; pointer-events:none; }
   .hint { position:fixed; left:18px; bottom:16px; font-size:9px; opacity:.55; z-index:5; pointer-events:none; }
   .controls { position:fixed; right:16px; bottom:16px; display:flex; gap:8px; z-index:6; }
@@ -30,6 +34,7 @@
     font-family:inherit; padding:11px 15px; border-radius:6px; font-size:12px; letter-spacing:.08em;
     backdrop-filter:blur(2px); text-shadow:0 0 6px rgba(255,170,48,.7); cursor:pointer; }
   button.on { background:rgba(120,60,0,.75); border-color:var(--hot); color:var(--hot); }
+  button.sm { padding:8px 10px; font-size:10px; }
   #cam { position:fixed; right:14px; bottom:70px; width:170px; height:128px; z-index:6;
     border:1px solid rgba(255,170,48,.4); border-radius:8px; object-fit:cover; transform:scaleX(-1);
     filter:sepia(1) hue-rotate(-15deg) saturate(2.2) brightness(.8); display:none; }
@@ -40,42 +45,102 @@
     background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.25) 2px,rgba(0,0,0,.25) 4px); }
   .vig { position:fixed; inset:0; z-index:7; pointer-events:none;
     background:radial-gradient(ellipse at center,transparent 38%,rgba(0,0,0,.72)); }
+  /* settings sheet */
+  #cfg { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.92); display:none;
+    align-items:center; justify-content:center; }
+  #cfg .card { width:min(420px,92vw); border:1px solid var(--amber); border-radius:10px;
+    background:rgba(20,10,0,.95); padding:22px; }
+  #cfg h2 { font-size:13px; letter-spacing:.3em; margin-bottom:16px; color:var(--hot); }
+  #cfg label { display:block; font-size:10px; opacity:.8; margin:12px 0 4px; letter-spacing:.15em; }
+  #cfg input { width:100%; background:#000; border:1px solid var(--amber); color:var(--hot);
+    font-family:inherit; font-size:13px; padding:10px; border-radius:6px; }
+  #cfg .row { display:flex; gap:8px; margin-top:18px; justify-content:flex-end; }
+  #boot { position:fixed; inset:0; z-index:30; background:#000; display:flex;
+    align-items:center; justify-content:center; font-size:12px; letter-spacing:.4em; color:var(--amber); }
 </style>
 </head>
 <body>
   <div id="orb"></div>
   <div class="grain"></div><div class="scan"></div><div class="vig"></div>
   <div class="hud title">U.L.T.R.O.N. ORB</div>
-  <div class="hud status"><span id="dot" class="dot"></span><span id="st">IDLE</span></div>
+  <div class="hud status"><span id="dot" class="dot"></span><span id="st">BOOT</span></div>
+  <div class="hud link" id="lnk">LINK: —</div>
   <div class="hud gest" id="gst">GESTURE: —</div>
   <div class="tr" id="tr"></div>
-  <div class="hint">PINCH talk · OPEN-PALM listen · PEACE shot · THUMBS vol · SWIPE nav · 2-HAND zoom</div>
+  <div class="hint">PINCH talk · OPEN-PALM listen · PEACE shot · THUMBS vol · SWIPE nav · 2-HAND zoom · ⚙ settings</div>
   <video id="cam" playsinline muted></video>
   <canvas id="ovl" width="170" height="128"></canvas>
   <div class="controls">
+    <button id="c" class="sm">⚙</button>
     <button id="g">GESTURES</button>
     <button id="t">TALK</button>
-    <button id="w">WAKE</button>
   </div>
 
-<script type="module">
-import * as THREE from "https://esm.sh/three@0.160";
-import { HandLandmarker, FilesetResolver } from "https://esm.sh/@mediapipe/tasks-vision@0.10.35";
+  <div id="cfg">
+    <div class="card">
+      <h2>SETTINGS</h2>
+      <label>ULTRON AGENT (Termux) — ws://IP:8081</label>
+      <input id="cfg-url" placeholder="ws://127.0.0.1:8081" />
+      <label>VOICE REACTIVITY (mic drives the orb)</label>
+      <input id="cfg-mic" placeholder="on / off" />
+      <div class="row">
+        <button id="cfg-x" class="sm">CANCEL</button>
+        <button id="cfg-s" class="sm">SAVE</button>
+      </div>
+    </div>
+  </div>
+  <div id="boot">U.L.T.R.O.N.</div>
 
-/* ---------- PREMIUM ORB ---------- */
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/js/three.module.js",
+    "@mediapipe/tasks-vision": "./vendor/js/vision_bundle.mjs"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+
+/* ============================== SETTINGS ============================== */
+const S = {
+  url: localStorage.getItem("ultron.agent") || `ws://127.0.0.1:8081`,
+  mic: localStorage.getItem("ultron.mic") !== "off",
+};
+const boot = document.getElementById("boot");
+setTimeout(()=>boot.remove(), 1400);
+
+document.getElementById("c").onclick = () => {
+  document.getElementById("cfg").style.display = "flex";
+  document.getElementById("cfg-url").value = S.url;
+  document.getElementById("cfg-mic").value = S.mic ? "on" : "off";
+};
+document.getElementById("cfg-x").onclick = () =>
+  document.getElementById("cfg").style.display = "none";
+document.getElementById("cfg-s").onclick = () => {
+  const u = document.getElementById("cfg-url").value.trim();
+  const m = document.getElementById("cfg-mic").value.trim().toLowerCase();
+  if (u) { S.url = u; localStorage.setItem("ultron.agent", u); }
+  S.mic = m !== "off"; localStorage.setItem("ultron.mic", S.mic ? "on" : "off");
+  document.getElementById("cfg").style.display = "none";
+  location.reload();
+};
+
+/* ============================== ORB (offline, vendored) ============================== */
 const C = { amber:0xffaa30, hot:0xffcc66, ice:0x66ccff, mid:0xdd7700 };
 const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,500);
 cam.position.set(0,0.4,5.5);
 const ren=new THREE.WebGLRenderer({antialias:true}); ren.setSize(innerWidth,innerHeight);
 ren.setPixelRatio(Math.min(devicePixelRatio,2));
 ren.toneMapping=THREE.ACESFilmicToneMapping; ren.toneMappingExposure=0.9;
-document.getElementById('orb').appendChild(ren.domElement);
+document.getElementById("orb").appendChild(ren.domElement);
 
-// post-processing (bloom + chromatic)
-const {EffectComposer}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/EffectComposer.js");
-const {RenderPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/RenderPass.js");
-const {UnrealBloomPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/UnrealBloomPass.js");
-const {ShaderPass}=await import("https://esm.sh/three@0.160/examples/jsm/postprocessing/ShaderPass.js");
+// post-processing — all local (vendored addons, no CDN)
+const {EffectComposer} = await import("./vendor/js/postprocessing/EffectComposer.js");
+const {RenderPass}     = await import("./vendor/js/postprocessing/RenderPass.js");
+const {UnrealBloomPass}= await import("./vendor/js/postprocessing/UnrealBloomPass.js");
+const {ShaderPass}     = await import("./vendor/js/postprocessing/ShaderPass.js");
 const composer=new EffectComposer(ren); composer.addPass(new RenderPass(scene,cam));
 const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.9,0.5,0.18); composer.addPass(bloom);
 const chrom=new ShaderPass({uniforms:{tDiffuse:{value:null},uTime:{value:0}},
@@ -92,21 +157,18 @@ const lineMat=(c,o=1)=>new THREE.LineBasicMaterial({color:c,transparent:true,opa
 function ring(r,lat,seg=120){const p=[];for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;p.push(new THREE.Vector3(r*Math.cos(lat)*Math.cos(a),r*Math.sin(lat),r*Math.cos(lat)*Math.sin(a)));}return new THREE.BufferGeometry().setFromPoints(p);}
 function merid(r,lon,seg=120){const p=[];for(let i=0;i<=seg;i++){const lat=i/seg*Math.PI-Math.PI/2;p.push(new THREE.Vector3(r*Math.cos(lat)*Math.cos(lon),r*Math.sin(lat),r*Math.cos(lat)*Math.sin(lon)));}return new THREE.BufferGeometry().setFromPoints(p);}
 
-// wireframe shells
 const R1=2.0, shell=new THREE.Group(); grp.add(shell);
 for(let i=-15;i<=15;i++){const lat=i/15*Math.PI/2*0.95; shell.add(new THREE.Line(ring(R1,lat),lineMat(i%3?C.amber*0+0x553300:C.mid,i%3?0.12:0.5)));}
 for(let i=0;i<24;i++){const lon=i/24*Math.PI*2; shell.add(new THREE.Line(merid(R1,lon),lineMat(i%6?0x553300:C.mid,i%6?0.1:0.6)));}
 const eq=new THREE.Group();
 for(let j=0;j<22;j++){const t=j/21*2-1; eq.add(new THREE.Line(ring(R1,t*0.4/2,200),lineMat(Math.abs(t)<0.3?C.hot:C.mid,0.8*(1-Math.abs(t)*0.65))));}
 shell.add(eq);
-// inner spiral core
 const core=new THREE.Group(); grp.add(core); const R3=0.9;
 for(let s=0;s<10;s++){const p=[];const turns=3+Math.random()*2,seg=300,ph=s/10*Math.PI*2;
   for(let i=0;i<=seg;i++){const t=i/seg,lat=t*Math.PI-Math.PI/2,lon=t*turns*Math.PI*2+ph;
     p.push(new THREE.Vector3(R3*Math.cos(lat)*Math.cos(lon),R3*Math.sin(lat),R3*Math.cos(lat)*Math.sin(lon)));}
   core.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),lineMat(C.hot,0.3+Math.random()*0.2)));}
 
-// PREMIUM energy core (fresnel shader)
 const cu={uTime:{value:0},uLevel:{value:0},uColorA:{value:new THREE.Color(C.hot)},uColorB:{value:new THREE.Color(C.ice)}};
 const coreMesh=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,4),new THREE.ShaderMaterial({
   uniforms:cu,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
@@ -116,66 +178,173 @@ const coreMesh=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,4),new THREE.Sha
    float pulse=0.5+0.5*sin(uTime*3.0)+uLevel*1.5;vec3 col=mix(uColorA,uColorB,fres);
    gl_FragColor=vec4(col*pulse,fres*0.9+uLevel*0.4+0.08);}`}));
 grp.add(coreMesh);
-// glow + god-ray sprite
 const glow=new THREE.Mesh(new THREE.SphereGeometry(0.65,32,32),new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:0.12,blending:THREE.AdditiveBlending,depthWrite:false})); grp.add(glow);
 const rtex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(0.2,'rgba(255,220,150,0.7)');g.addColorStop(0.5,'rgba(255,160,60,0.25)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
 const ray=new THREE.Sprite(new THREE.SpriteMaterial({map:rtex,color:C.hot,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0.5})); ray.scale.set(6.5,6.5,1); grp.add(ray);
-// nebula
 const N=1500,pp=new Float32Array(N*3),cc=new Float32Array(N*3),ca=new THREE.Color(C.amber),cb=new THREE.Color(C.ice);
 for(let i=0;i<N;i++){const r=1.3+Math.random()*4.6,th=Math.random()*6.28,ph=Math.acos(2*Math.random()-1);
   pp[i*3]=r*Math.sin(ph)*Math.cos(th);pp[i*3+1]=r*Math.cos(ph)*0.7;pp[i*3+2]=r*Math.sin(ph)*Math.sin(th);
   const col=ca.clone().lerp(cb,Math.random());cc[i*3]=col.r;cc[i*3+1]=col.g;cc[i*3+2]=col.b;}
 const ng=new THREE.BufferGeometry();ng.setAttribute('position',new THREE.BufferAttribute(pp,3));ng.setAttribute('color',new THREE.BufferAttribute(cc,3));
 const neb=new THREE.Points(ng,new THREE.PointsMaterial({size:0.055,vertexColors:true,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false,map:rtex}));grp.add(neb);
-// scan ring
 const sr=new THREE.Mesh(new THREE.RingGeometry(R1-0.01,R1+0.01,120),new THREE.MeshBasicMaterial({color:C.hot,transparent:true,opacity:0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false})); sr.rotation.x=Math.PI/2; grp.add(sr);
 
-let audio=0,target=0,state="idle"; const clock=new THREE.Clock();
+let micLevel=0,target=0,state="idle"; const clock=new THREE.Clock();
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
   shell.rotation.y+=0.0015;shell.rotation.x=Math.sin(t*0.08)*0.05;
   core.rotation.y-=0.005;core.rotation.z+=0.002;
-  audio=THREE.MathUtils.lerp(audio,target,0.25);
-  cu.uTime.value=t; cu.uLevel.value=audio+(state==='think'?0.25*(0.5+0.5*Math.sin(t*6)):0);
-  const breathe=1+Math.sin(t*0.8)*0.04+audio*0.5;
-  coreMesh.scale.setScalar(breathe); glow.scale.setScalar(breathe*(1+audio*0.6));
-  glow.material.opacity=0.1+audio*0.35+(state==='speak'?0.1:0);
-  ray.material.opacity=0.35+audio*0.5+(state==='listen'?0.15:0); ray.scale.setScalar(6.5+audio*3+Math.sin(t*0.5)*0.3);
+  micLevel=THREE.MathUtils.lerp(micLevel,target,0.25);
+  cu.uTime.value=t; cu.uLevel.value=micLevel+(state==='think'?0.25*(0.5+0.5*Math.sin(t*6)):0);
+  const breathe=1+Math.sin(t*0.8)*0.04+micLevel*0.5;
+  coreMesh.scale.setScalar(breathe); glow.scale.setScalar(breathe*(1+micLevel*0.6));
+  glow.material.opacity=0.1+micLevel*0.35+(state==='speak'?0.1:0);
+  ray.material.opacity=0.35+micLevel*0.5+(state==='listen'?0.15:0); ray.scale.setScalar(6.5+micLevel*3+Math.sin(t*0.5)*0.3);
   ray.material.color.set(state==='think'?C.ice:C.hot);
   neb.rotation.y+=0.0006; neb.rotation.x=Math.sin(t*0.1)*0.2;
   const sy=Math.sin(t*0.4)*R1; sr.position.y=sy; const ss=Math.sqrt(Math.max(0,R1*R1-sy*sy))/R1;
   sr.scale.set(ss,ss,1); sr.material.opacity=0.2*ss;
-  bloom.strength=1.7+Math.sin(t*0.8)*0.3+(state==='speak'?audio*1.4:0);
+  bloom.strength=1.7+Math.sin(t*0.8)*0.3+(state==='speak'?micLevel*1.4:0);
   chrom.uniforms.uTime.value=t; composer.render();}
 animate();
 
-/* ---------- GESTURES ---------- */
-let lm=null,on=false,prev=false; const video=document.getElementById('cam'),ovl=document.getElementById('ovl'),octx=ovl.getContext('2d');
-async function startG(){const fs=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm");
-  lm=await HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2});
-  const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});video.srcObject=s;await video.play();video.style.display="block";ovl.style.display="block";on=true;loop();}
-let last=0; function loop(){if(!on)return;requestAnimationFrame(loop);if(!lm||video.readyState<2||video.currentTime===last)return;last=video.currentTime;
-  const r=lm.detectForVideo(video,performance.now());classify(r.landmarks);}
-function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
-function classify(ls){octx.clearRect(0,0,ovl.width,ovl.height);const hands=ls||[];const pinches=[];
-  hands.forEach(L=>{const pinch=dist(L[4],L[8])/Math.max(1e-6,dist(L[0],L[9]));if(pinch<0.35)pinches.push(1);
-    octx.strokeStyle="#ffcc66";octx.lineWidth=2;octx.beginPath();octx.moveTo((1-L[4].x)*ovl.width,L[4].y*ovl.height);octx.lineTo((1-L[8].x)*ovl.width,L[8].y*ovl.height);octx.stroke();});
-  let act=null,name="—"; if(pinches.length>=2){act="zoom";name="2-HAND ZOOM";}else if(pinches.length===1){if(!prev)act="talk";name="PINCH";}
-  if(hands.length===0)prev=false;else prev=pinches.length>0;
-  document.getElementById('gst').textContent="GESTURE: "+name; if(act)send({type:act});}
+/* ============================== MIC (audio-reactive orb) ============================== */
+async function startMic(){
+  if(!S.mic) return;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    const src = ac.createMediaStreamSource(stream);
+    const an = ac.createAnalyser(); an.fftSize = 512;
+    src.connect(an);
+    const buf = new Uint8Array(an.frequencyBinCount);
+    (function tick(){ an.getByteFrequencyData(buf);
+      let sum=0; for(let i=0;i<buf.length;i++) sum+=buf[i];
+      target = Math.min(1.6, (sum/buf.length)/90); requestAnimationFrame(tick); })();
+  }catch(e){ /* mic denied — orb still runs, just not reactive */ }
+}
+startMic();
 
-/* ---------- STATE/WS ---------- */
-let ws; function connect(){try{ws=new WebSocket(`ws://${location.hostname}:8081`);
-  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type==='audio')target=m.level;
-    if(m.type==='state'){state=m.state;document.getElementById('st').textContent=m.state.toUpperCase();
-      const d=document.getElementById('dot');d.className='dot'+(m.state==='idle'?'':' '+m.state);}
-    if(m.type==='transcript'){const t=document.getElementById('tr');t.innerHTML+=`<div>${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;}};
-  ws.onclose=()=>{setTimeout(connect,2000);}; // auto-reconnect if agent restarts
-  ws.onerror=()=>{try{ws.close();}catch(e){}};}catch(e){setTimeout(connect,2000);}}
-connect(); function send(m){if(ws&&ws.readyState===1)ws.send(JSON.stringify(m));}
-document.getElementById('t').onclick=()=>{send({type:'talk'});state='listen';};
-document.getElementById('w').onclick=function(){const w=!this.classList.contains('on');this.classList.toggle('on');send({type:'wake',on:w});};
-document.getElementById('g').onclick=async function(){if(on){on=false;this.classList.remove('on');video.style.display='none';ovl.style.display='none';}else{this.classList.add('on');try{await startG();}catch(e){document.getElementById('gst').textContent='CAMERA DENIED';}}};
-addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
+/* ============================== GESTURES (all 6, offline) ============================== */
+const video=document.getElementById("cam"),ovl=document.getElementById("ovl"),octx=ovl.getContext("2d");
+const gstEl=document.getElementById("gst");
+let lm=null,gOn=false;
+async function startG(){
+  const fs = await FilesetResolver.forVisionTasks("./vendor/wasm");   // LOCAL wasm
+  lm = await HandLandmarker.createFromOptions(fs,{
+    baseOptions:{modelAssetPath:"./vendor/models/hand_landmarker.task",delegate:"GPU"},
+    runningMode:"VIDEO",numHands:2});
+  const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});
+  video.srcObject=s; await video.play(); video.style.display="block"; ovl.style.display="block";
+  gOn=true; loop();
+}
+let last=0;
+function loop(){ if(!gOn) return; requestAnimationFrame(loop);
+  if(!lm||video.readyState<2||video.currentTime===last) return; last=video.currentTime;
+  const r=lm.detectForVideo(video,performance.now()); classify(r.landmarks);
+}
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+/* gesture state machine */
+let gPrev=null,gHold=null,gHoldT=0;
+function classify(ls){
+  octx.clearRect(0,0,ovl.width,ovl.height);
+  const hands=ls||[];
+  // draw skeleton per hand
+  hands.forEach(L=>{
+    octx.strokeStyle="#ffcc66"; octx.lineWidth=1.5;
+    const P=i=>[(1-L[i].x)*ovl.width,L[i].y*ovl.height];
+    const bones=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
+                  [9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+    bones.forEach(([a,b])=>{const A=P(a),B=P(b);octx.beginPath();octx.moveTo(...A);octx.lineTo(...B);octx.stroke();});
+  });
+  // --- compute per-hand features ---
+  const feats=hands.map(L=>{
+    const pinch = dist(L[4],L[8]) / Math.max(1e-6, dist(L[0],L[9]));      // thumb-index
+    const tip=(i)=>dist(L[i],L[0]) / Math.max(1e-6, dist(L[5],L[0]));    // tip reach vs palm
+    const up = [8,12,16,20].filter(i=>tip(i) > 1.35).length;             // extended fingers
+    const thumbUp = tip(4) > 1.25 && Math.abs(L[4].y-L[3].y) < Math.abs(L[8].y-L[6].y)*0.7;
+    return {pinch, up, thumbUp, L};
+  });
+  const pinches = feats.filter(f=>f.pinch<0.35).length;
+  let g = null;
+  if (pinches >= 2)            g = "zoom";
+  else if (pinches === 1)      g = "pinch";
+  else if (hands.length === 1){
+    const f = feats[0];
+    if (f.up === 0 && f.thumbUp)  g = "thumbs-up";
+    if (f.up === 0 && !f.thumbUp && f.pinch > 0.5) g = "fist";
+    if (f.up >= 4)               g = "palm";
+    if (f.up === 2 && f.pinch > 0.5 && f.L[8].y < f.L[6].y && f.L[12].y < f.L[10].y) g = "peace";
+    if (f.thumbUp && f.up === 0) g = "thumbs-up";
+    if (f.up === 1 && f.L[8].y < f.L[6].y) g = "point";
+  }
+  // swipe: track palm x over time
+  if (g === "palm" && hands.length === 1){
+    const cx = feats[0].L[9].x;
+    if (gPrev && gPrev.g === "palm"){
+      const dx = cx - gPrev.x;
+      if (Math.abs(dx) > 0.11){ g = dx < 0 ? "swipe-left" : "swipe-right"; }
+    }
+    gHold = {g:"palm", x:cx, t:performance.now()};
+    if (!gPrev || performance.now()-gPrev.t > 400) gPrev = gHold;
+  } else { gPrev = null; }
+
+  const names={zoom:"2-HAND ZOOM",pinch:"PINCH",palm:"OPEN PALM",peace:"PEACE ✌",
+    "thumbs-up":"THUMBS UP","swipe-left":"SWIPE ‹","swipe-right":"SWIPE ›",point:"POINT",fist:"—"};
+  gstEl.textContent = "GESTURE: " + (g && names[g] ? names[g] : "—");
+
+  // fire only on TRANSITIONS (rising edge)
+  if (g && g !== window._lastG){
+    fire(g);
+  }
+  window._lastG = g;
+}
+function fire(g){
+  const map={ "pinch":{type:"talk"}, "zoom":{type:"gesture",action:"zoom"},
+    "palm":{type:"gesture",action:"listen"}, "peace":{type:"gesture",action:"screenshot"},
+    "thumbs-up":{type:"gesture",action:"volup"}, "swipe-left":{type:"gesture",action:"prev"},
+    "swipe-right":{type:"gesture",action:"next"} };
+  const m = map[g]; if(m) send(m);
+}
+
+/* ============================== LINK (agent WS, robust) ============================== */
+let ws=null, backoff=1000;
+const lnk=document.getElementById("lnk");
+function setLink(ok,txt){ lnk.textContent = "LINK: "+txt; lnk.className = "hud link "+(ok?"ok":"bad"); }
+function connect(){
+  setLink(false,"connecting…");
+  try{ ws = new WebSocket(S.url); }catch(e){ setLink(false,"bad url"); setTimeout(connect,3000); return; }
+  ws.onopen  = ()=>{ setLink(true,S.url.replace("ws://","")); backoff=1000; };
+  ws.onclose = ()=>{ setLink(false,"reconnecting…"); setTimeout(connect, backoff); backoff=Math.min(backoff*1.6, 8000); };
+  ws.onerror = ()=>{ try{ws.close();}catch(e){} };
+  ws.onmessage = e=>{
+    try{ const m=JSON.parse(e.data);
+      if(m.type==="audio") target=m.level;
+      if(m.type==="state"){ state=m.state; document.getElementById("st").textContent=m.state.toUpperCase();
+        const d=document.getElementById("dot"); d.className="dot"+(m.state==="idle"?"":" "+m.state); }
+      if(m.type==="transcript"){ const t=document.getElementById("tr");
+        const div=document.createElement("div");
+        div.textContent=(m.who==="user"?"YOU: ":"ULTRON: ")+m.text;
+        t.appendChild(div); t.scrollTop=t.scrollHeight;
+        while(t.childNodes.length>40) t.removeChild(t.firstChild); }
+    }catch(err){}
+  };
+}
+connect();
+function send(m){ if(ws && ws.readyState===1) ws.send(JSON.stringify(m)); }
+
+/* buttons */
+document.getElementById("t").onclick=()=>{ send({type:"talk"}); state="listen"; };
+document.getElementById("g").onclick=async function(){
+  if(gOn){ gOn=false; this.classList.remove("on"); video.style.display="none"; ovl.style.display="none"; }
+  else{ this.classList.add("on"); try{ await startG(); }
+    catch(e){ gstEl.textContent="CAMERA DENIED"; this.classList.remove("on"); } }
+};
+
+/* keep screen on while the orb is visible */
+try{ if(navigator.wakeLock){ navigator.wakeLock.request("screen").catch(()=>{}); } }catch(e){}
+
+addEventListener("resize",()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
+  ren.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
 </script>
 </body>
 </html>

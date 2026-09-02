@@ -9,8 +9,12 @@
     "android:release": "cd android && ./gradlew assembleRelease"
   },
   "devDependencies": {
-    "@capacitor/core": "^6.1.0",
+    "@capacitor/android": "^6.1.0",
     "@capacitor/cli": "^6.1.0",
-    "@capacitor/android": "^6.1.0"
+    "@capacitor/core": "^6.1.0"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "three": "^0.185.1"
   }
 }
