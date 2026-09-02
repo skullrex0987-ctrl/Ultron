@@ -9,8 +9,8 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
-from core.config import CFG
-from core.providers import build_provider, LLMProvider
+from config import CFG
+from providers import build_provider, LLMProvider
 
 SYSTEM_PROMPT = """You are ULTRON, a local autonomous agent. You have tools.
 When the user asks for an action, respond with a JSON tool call:

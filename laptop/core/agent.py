@@ -10,12 +10,12 @@ from __future__ import annotations
 import os
 from typing import Callable, Optional
 
-from core.config import CFG
-from core.audit import log, transcript
-from core.ollama_client import BrainClient
-from core.tools import dispatch, format_reply
-from core.android_control import AndroidControl
-from core.perception import perceive
+from config import CFG
+from audit import log, transcript
+from ollama_client import BrainClient
+from tools import dispatch, format_reply
+from android_control import AndroidControl
+from perception import perceive
 
 
 class KillSwitch(Exception):

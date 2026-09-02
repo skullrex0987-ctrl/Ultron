@@ -13,7 +13,7 @@ import json
 import queue
 from typing import Optional, Callable
 
-from core.config import CFG
+from config import CFG
 
 
 class VoiceListener:

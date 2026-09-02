@@ -9,8 +9,8 @@ import subprocess
 import urllib.request
 from typing import Callable, Optional
 
-from core.config import CFG
-from core.audit import log
+from config import CFG
+from audit import log
 
 # Commands that require an explicit confirm even in auto mode
 DESTRUCTIVE = ("rm -rf", "mkfs", "dd if=", "format", "shutdown", "reboot",

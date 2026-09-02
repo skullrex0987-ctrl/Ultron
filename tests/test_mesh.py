@@ -6,14 +6,15 @@ phone and confirms the laptop core receives it (full mesh relay).
 """
 import asyncio
 import json
+import os
 import threading
 import time
 import unittest
 
-ROOT = "/root/jarvis-ultron/laptop/core"
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "laptop", "core")
 import sys
 sys.path.insert(0, ROOT)
-sys.path.insert(0, "/root/jarvis-ultron/phone/agent")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "phone", "agent"))
 
 
 class TestMeshBridge(unittest.TestCase):

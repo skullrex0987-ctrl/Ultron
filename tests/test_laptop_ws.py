@@ -6,12 +6,13 @@ and asserts the core processes it and streams back a state + transcript reply.
 """
 import asyncio
 import json
+import os
+import sys
 import threading
 import types
 import unittest
 
-ROOT = "/root/jarvis-ultron/laptop/core"
-import sys
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "laptop", "core")
 sys.path.insert(0, ROOT)
 
 

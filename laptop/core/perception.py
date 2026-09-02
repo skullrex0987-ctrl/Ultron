@@ -12,7 +12,7 @@ import os
 import tempfile
 from typing import Optional
 
-from core.audit import log
+from audit import log
 
 
 def _ocr(image_path: str) -> str:

@@ -41,7 +41,8 @@ class TestToolRouting(unittest.TestCase):
         self.assertIn("jarvis_ok", r["stdout"])
 
     def test_file_write_read(self):
-        p = "/tmp/jarvis_test_file.txt"
+        import tempfile
+        p = os.path.join(tempfile.gettempdir(), "jarvis_test_file.txt")
         dispatch({"tool": "file_write", "args": {"path": p, "content": "hi there"}})
         r = dispatch({"tool": "file_read", "args": {"path": p}})
         self.assertTrue(r["ok"])
@@ -158,13 +159,16 @@ class TestAndroidControl(unittest.TestCase):
 
     def test_find_node_parses_bounds(self):
         import xml.etree.ElementTree as ET
+        import tempfile
         xml = ('<?xml version="1.0"?><hierarchy><node text="YouTube" '
                'bounds="[10,20][110,60]"></node></hierarchy>')
-        with open("/tmp/ui.xml", "w") as f:
+        with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as f:
             f.write(xml)
-        with mock.patch.object(self.a, "dump_ui", return_value=ET.parse("/tmp/ui.xml")):
+            tmp = f.name
+        with mock.patch.object(self.a, "dump_ui", return_value=ET.parse(tmp)) as m:
             pt = self.a.find_node("YouTube")
             self.assertEqual(pt, (60, 40))
+        os.unlink(tmp)
 
 
 class TestBridge(unittest.TestCase):

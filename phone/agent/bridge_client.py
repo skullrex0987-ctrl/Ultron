@@ -11,7 +11,7 @@ import json
 import time
 from typing import Optional, Callable
 
-from agent.config_phone import CFG
+from config_phone import CFG
 
 
 class LaptopLink:

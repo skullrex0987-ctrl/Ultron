@@ -1,9 +1,9 @@
 """Self-healing tests: supervisor restart, health watchdog, stuck-task repair."""
-import sys, time, types
+import sys, os, time, types
 import unittest
 from unittest import mock
 
-sys.path.insert(0, "/root/jarvis-ultron/laptop/core")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "laptop", "core"))
 import selfheal
 from selfheal import Supervisor, HealthWatch, self_repair_stuck
 
@@ -45,7 +45,7 @@ class TestHealthWatch(unittest.TestCase):
             recovered.append(True)
             checks["up"] = True  # simulate fix
         states = []
-        w = HealthWatch(interval=0.01, on_state=lambda s, d="": states.append((s, d)))
+        w = HealthWatch(interval=0.01, on_state=lambda lbl, s, d="": states.append((s, d)))
         w.add("svc", check, recover=recover)
         # first tick: down -> recover called
         checks["up"] = False

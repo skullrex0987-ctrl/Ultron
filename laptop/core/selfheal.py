@@ -27,7 +27,7 @@ from typing import Callable, Optional
 
 def log(side: str, data: dict):
     try:
-        from core.config import CFG
+        from config import CFG
         with open(CFG.audit_log, "a", encoding="utf-8") as f:
             f.write(__import__("json").dumps({"side": side, **data}) + "\n")
     except Exception:
