@@ -54,12 +54,16 @@ else
   pkg install -y python-websockets >/dev/null 2>&1 && ok "websockets (pkg)" || {
     fail "websockets (REQUIRED — the agent cannot run without it)"; exit 1; }
 fi
-# OPTIONAL: each degrades gracefully if unavailable on this Python version
-for p in fastapi uvicorn pillow numpy vosk; do
+# OPTIONAL extras — what each is actually FOR:
+#   fastapi+uvicorn : web-orb HUD in the phone BROWSER (port 8080) —
+#                     skip if you only use the Orb APK (recommended)
+#   vosk            : offline voice input (wake word "ultron"). Needs a
+#                     matching Python wheel — none for 3.14 yet.
+for p in fastapi uvicorn vosk; do
   if python -c "import $p" >/dev/null 2>&1; then ok "$p (already present)"; continue; fi
   echo "   optional: $p"
   if pip install --no-cache-dir --timeout 45 --retries 2 "$p" >/dev/null 2>&1; then ok "$p"
-  else echo "   (skip $p — no wheel for this Python; feature disabled, install continues)"; fi
+  else echo "   (skip $p — not installable on this Python; install continues)"; fi
 done
 python - <<'PY' 2>/dev/null || true
 try:
