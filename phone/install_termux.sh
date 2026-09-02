@@ -32,22 +32,33 @@ else
   git clone -q --depth 1 https://github.com/skullrex0987-ctrl/Ultron.git "$HOME/ultron" && ok "cloned to ~/ultron" || fail "clone — check network"
 fi
 
-step 3/7 "Python deps (progress shown; optional pkgs skip gracefully)"
+step 3/7 "Python deps (live pip progress; optional pkgs skip gracefully)"
 # NOTE: no 'pip install --upgrade pip' here — it downloads a whole new pip
 # before doing anything useful (the #1 cause of 'stuck at websockets').
-pip config set global.progress_bar off >/dev/null 2>&1 || true
-# REQUIRED: agent core — abort-worthy if missing
-echo "   installing websockets (the only required one)…"
-if pip install --no-cache-dir websockets >/dev/null 2>&1; then ok "websockets"
+# REQUIRED: agent core — abort-worthy if missing. pip runs UNsilenced so the
+# user sees the live download bar; a watchdog pings every 15s so it never
+# looks frozen while pip is quietly resolving.
+pipws() {
+  # 15s watchdog keeps printing so a slow network never looks frozen
+  ( while sleep 15; do echo "   …still working (pip resolving/downloading — slow networks take minutes) [$(date +%H:%M:%S)]"; done ) &
+  local WD=$!
+  pip install --no-cache-dir --timeout 45 --retries 2 websockets
+  local RC=$?
+  kill $WD 2>/dev/null
+  return $RC
+}
+if python -c "import websockets" >/dev/null 2>&1; then ok "websockets (already present)"
+elif pipws; then ok "websockets"
 else
-  echo "   retrying via pkg (python-websockets)…"
+  echo "   pip slow/failed -> trying Termux's binary pkg (usually seconds)…"
   pkg install -y python-websockets >/dev/null 2>&1 && ok "websockets (pkg)" || {
     fail "websockets (REQUIRED — the agent cannot run without it)"; exit 1; }
 fi
 # OPTIONAL: each degrades gracefully if unavailable on this Python version
 for p in fastapi uvicorn pillow numpy vosk; do
   if python -c "import $p" >/dev/null 2>&1; then ok "$p (already present)"; continue; fi
-  if pip install --no-cache-dir --timeout 60 "$p" >/dev/null 2>&1; then ok "$p"
+  echo "   optional: $p"
+  if pip install --no-cache-dir --timeout 45 --retries 2 "$p" >/dev/null 2>&1; then ok "$p"
   else echo "   (skip $p — no wheel for this Python; feature disabled, install continues)"; fi
 done
 python - <<'PY' 2>/dev/null || true
