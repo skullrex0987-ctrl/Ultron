@@ -14,6 +14,11 @@ _lock = threading.Lock()
 def log(event: str, data: Any = None, side: str = "laptop") -> None:
     entry = {"ts": time.time(), "side": side, "event": event, "data": data}
     line = json.dumps(entry, default=str)
+    import hashlib as _h
+    sha = _h.sha256(line.encode()).hexdigest()
+    entry["_sha256"] = sha
+    # re-serialize so the written line carries its own integrity hash
+    line = json.dumps(entry, default=str)
     try:
         with open(CFG.audit_log, "a", encoding="utf-8") as f:
             f.write(line + "\n")

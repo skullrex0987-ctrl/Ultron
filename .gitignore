@@ -1,8 +1,10 @@
 __pycache__/
 *.pyc
+**/__pycache__/
 node_modules/
 .next/
 outbox/
+**/audit.jsonl
 # local Android SDK / gradle caches (build box only)
 /root/android-sdk/
 /root/.gradle/

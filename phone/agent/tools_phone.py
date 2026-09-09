@@ -191,6 +191,9 @@ def adb_self(cmd: str, ctrl=None) -> dict:
 def dispatch(call: dict, ctrl=None) -> dict:
     n = call.get("tool")
     a = call.get("args", {}) or {}
+    allowed = {"cmd", "path", "content", "url", "query", "q", "text", "goal"}
+    if not isinstance(a, dict) or not set(a).issubset(allowed):
+        return {"ok": False, "reason": "schema"}
     if n == "shell": return shell(a.get("cmd", ""))
     if n == "file_read": return file_read(a.get("path", ""))
     if n == "file_write": return file_write(a.get("path", ""), a.get("content", ""))

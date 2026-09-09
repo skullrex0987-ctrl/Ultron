@@ -161,7 +161,9 @@ ws&&ws.addEventListener('message',e=>{const m=JSON.parse(e.data);
   if(m.type==='audio')lvl=m.level;if(m.type==='state'){state=m.state;document.getElementById('st').textContent=m.state.toUpperCase();}
   if(m.type==='gesture')document.getElementById('gst').textContent='GESTURE: '+m.name;
   if(m.type==='transcript'){const t=document.getElementById('tr');
-    t.innerHTML+=`<div>${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;}});
+    const row=document.createElement('div');
+    row.textContent=(m.who==='user'?'YOU':'ULTRON')+': '+(m.text||'');
+    t.appendChild(row);}});
 document.getElementById('t').onclick=()=>ws&&ws.send(JSON.stringify({type:'talk'}));
 document.getElementById('g').onclick=()=>ws&&ws.send(JSON.stringify({type:'gestures'}));
 // typed goal input (pointer-events:auto) -> send {type:'goal',goal:text}

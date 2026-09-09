@@ -244,6 +244,9 @@ def dispatch(tool_call: dict, confirm: Optional[Callable[[str], bool]] = None,
     """Route a structured tool call (from OllamaClient.chat) to the right tool."""
     name = tool_call.get("tool")
     args = tool_call.get("args", {}) or {}
+    allowed = {"cmd", "path", "content", "url", "query", "q", "text", "goal"}
+    if not isinstance(args, dict) or not set(args).issubset(allowed):
+        return {"ok": False, "reason": "schema"}
     if name == "shell":
         return shell(args.get("cmd", ""), confirm)
     if name == "file_read":

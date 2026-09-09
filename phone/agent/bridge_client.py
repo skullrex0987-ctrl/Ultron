@@ -30,8 +30,9 @@ class LaptopLink:
             s = socket.create_connection((host, port), timeout=5)
             s.sendall(f"PAIR {tok}\n".encode())
             line = s.recv(1024).decode().strip()
-            if line.startswith("DENIED"):
+            if line != "OK":
                 self.linked = False
+                s.close()
                 return False
             # send our hello/state
             hello = json.dumps({"name": CFG.device_name, "side": "phone-mini",

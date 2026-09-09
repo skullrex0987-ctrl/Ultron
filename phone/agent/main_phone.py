@@ -219,7 +219,9 @@ class PhoneAgent:
         try:
             wav = self.tts.speak(text)
             if wav:
-                os.system(f"play {wav} >/dev/null 2>&1 || true")
+                import subprocess
+                subprocess.run(["play", wav], shell=False, capture_output=True,
+                               text=True, check=False)
         except Exception:
             pass
 
@@ -230,7 +232,8 @@ class PhoneAgent:
 
     async def serve(self):
         self.loop = asyncio.get_event_loop()
-        async with websockets.serve(self.handler, "0.0.0.0", 8081):
+        ws_host = os.getenv("ULTRON_WS_HOST", "127.0.0.1")
+        async with websockets.serve(self.handler, ws_host, 8081):
             log("phone", {"event": "ws-up", "port": 8081})
             await asyncio.Future()
 
