@@ -59,26 +59,35 @@ class PhoneAgent:
         self.watch = HealthWatch(interval=20.0, on_state=self._on_heal_state)
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self.busy = False
+        self._mesh_thread = None
 
     # ---- mesh (laptop) ----
     def connect_laptop(self) -> bool:
         self.link = auto_link()
         self.linked = self.link.linked
-        if self.linked:
-            threading.Thread(target=self._mesh_poll, daemon=True).start()
+        if self._mesh_thread is None or not self._mesh_thread.is_alive():
+            self._mesh_thread = threading.Thread(target=self._mesh_poll, daemon=True)
+            self._mesh_thread.start()
         return self.linked
 
     def _mesh_poll(self):
-        if not self.link:
-            return
-        while self.linked:
+        backoff = 1.0
+        while True:
+            if not self.linked or not self.link:
+                time.sleep(backoff)
+                self.link = auto_link()
+                self.linked = self.link.linked
+                backoff = min(backoff * 2, 30.0) if not self.linked else 1.0
+                continue
             try:
                 m = self.link.poll()
                 if m and m.get("type") == "goal":
                     self.run_task(m.get("text", ""), self.max_steps)
+                if m and m.get("type") == "ping":
+                    self.link.send({"type": "pong"})
             except Exception:
+                self.link.close()
                 self.linked = False
-                break
 
     def chat(self, text: str) -> dict:
         """Reason with laptop brain if linked, else local 0.8b (Q23 A)."""

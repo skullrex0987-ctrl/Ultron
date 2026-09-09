@@ -40,7 +40,7 @@ class Config:
     # --- Link / mesh ---
     bridge_host: str = field(default_factory=lambda: os.getenv("ULTRON_BRIDGE_HOST", "0.0.0.0"))
     bridge_port: int = field(default_factory=lambda: int(os.getenv("ULTRON_BRIDGE_PORT", "8765")))
-    pair_code: str = field(default_factory=lambda: os.getenv("ULTRON_PAIR_CODE", "ultron"))
+    pair_code: str = field(default_factory=lambda: os.getenv("ULTRON_PAIR_CODE", ""))
     device_name: str = "laptop-main"
 
     # --- Safety ---

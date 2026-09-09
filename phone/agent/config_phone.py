@@ -14,7 +14,7 @@ class PhoneConfig:
     ollama_host: str = os.getenv("ULTRON_OLLAMA", "http://127.0.0.1:11434")
     mini_model: str = os.getenv("ULTRON_MINI_MODEL", "qwen3.5:0.8b")
     laptop_host: str = os.getenv("ULTRON_LAPTOP", "http://192.168.1.1:8765")
-    pair_code: str = os.getenv("ULTRON_PAIR_CODE", "ultron")
+    pair_code: str = os.getenv("ULTRON_PAIR_CODE", "")
     device_name: str = "poco-x6pro"
     use_accessibility: bool = True
     stt_lang: str = "hi"  # Vosk Hin+Eng; switch per input

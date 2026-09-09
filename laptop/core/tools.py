@@ -6,6 +6,7 @@ confirm callback for destructive commands when not in full-auto mode.
 from __future__ import annotations
 import os
 import subprocess
+import shlex
 import urllib.request
 from typing import Callable, Optional
 
@@ -24,13 +25,26 @@ def _needs_confirm(cmd: str) -> bool:
 
 
 def shell(cmd: str, confirm: Optional[Callable[[str], bool]] = None) -> dict:
-    if _needs_confirm(cmd):
-        # destructive: block unless an explicit confirm callback approves
-        if not confirm or not confirm(cmd):
-            return {"ok": False, "reason": "blocked-destructive"}
-    log("tool", {"tool": "shell", "cmd": cmd})
+    if not isinstance(cmd, str) or not cmd.strip():
+        return {"ok": False, "reason": "empty-command"}
+    if _needs_confirm(cmd) and (not confirm or not confirm(cmd)):
+        return {"ok": False, "reason": "blocked-destructive"}
+    # Shell execution is opt-in and never uses a shell interpreter. This blocks
+    # pipes, redirects, substitutions, and command chaining by construction.
+    if os.getenv("ULTRON_ALLOW_SHELL", "0") != "1":
+        return {"ok": False, "reason": "shell-disabled"}
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True,
+        argv = shlex.split(cmd, posix=(os.name != "nt"))
+    except ValueError as e:
+        return {"ok": False, "reason": f"invalid-command:{e}"}
+    if not argv:
+        return {"ok": False, "reason": "empty-command"}
+    log("tool", {"tool": "shell", "cmd": cmd, "argv": argv[0]})
+    try:
+        if os.name == "nt" and argv[0].lower() == "echo":
+            return {"ok": True, "returncode": 0,
+                    "stdout": " ".join(argv[1:]) + "\n", "stderr": ""}
+        r = subprocess.run(argv, shell=False, capture_output=True, text=True,
                            timeout=180, cwd=os.path.expanduser("~"))
         return {"ok": True, "returncode": r.returncode,
                 "stdout": r.stdout[:8000], "stderr": r.stderr[:4000]}

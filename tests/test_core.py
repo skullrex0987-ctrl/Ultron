@@ -36,7 +36,8 @@ class TestToolRouting(unittest.TestCase):
         self.assertIn("unknown", r["reason"])
 
     def test_shell_runs(self):
-        r = dispatch({"tool": "shell", "args": {"cmd": "echo jarvis_ok"}})
+        with mock.patch.dict(os.environ, {"ULTRON_ALLOW_SHELL": "1"}):
+            r = dispatch({"tool": "shell", "args": {"cmd": "echo jarvis_ok"}})
         self.assertTrue(r["ok"])
         self.assertIn("jarvis_ok", r["stdout"])
 
@@ -55,8 +56,9 @@ class TestToolRouting(unittest.TestCase):
         self.assertEqual(r["reason"], "blocked-destructive")
 
     def test_destructive_allowed_with_confirm(self):
-        r = dispatch({"tool": "shell", "args": {"cmd": "echo allowed"}},
-                     confirm=lambda c: True)
+        with mock.patch.dict(os.environ, {"ULTRON_ALLOW_SHELL": "1"}):
+            r = dispatch({"tool": "shell", "args": {"cmd": "echo allowed"}},
+                         confirm=lambda c: True)
         self.assertTrue(r["ok"])
 
 
@@ -181,6 +183,7 @@ class TestBridge(unittest.TestCase):
 
     def test_pair_accepts_code(self):
         from bridge import Bridge
+        C.CFG.pair_code = "test-pair-code"
         b = Bridge()
         self.assertIn(b.pair_code, (b.pair_code, b.session_token))
 

@@ -8,6 +8,7 @@
 from __future__ import annotations
 import socket
 import json
+import os
 import time
 from typing import Optional, Callable
 
@@ -25,7 +26,10 @@ class LaptopLink:
                 token: Optional[str] = None) -> bool:
         host = host or CFG.laptop_host.replace("http://", "").split(":")[0]
         port = port or 8765
-        tok = token or CFG.pair_code
+        tok = token or os.getenv("ULTRON_PAIR_TOKEN") or CFG.pair_code
+        if not tok:
+            self.linked = False
+            return False
         try:
             s = socket.create_connection((host, port), timeout=5)
             s.sendall(f"PAIR {tok}\n".encode())
@@ -34,7 +38,6 @@ class LaptopLink:
                 self.linked = False
                 s.close()
                 return False
-            # send our hello/state
             hello = json.dumps({"name": CFG.device_name, "side": "phone-mini",
                                 "brain": CFG.mini_model})
             s.sendall((hello + "\n").encode())

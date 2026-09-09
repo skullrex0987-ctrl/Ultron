@@ -4,6 +4,7 @@ import os
 import re as _re
 import html as _html
 import subprocess
+import shlex
 import urllib.request
 import urllib.parse as _uparse
 from typing import Optional
@@ -73,13 +74,22 @@ def _ddg_links(html_text: str, limit: int = 4) -> list:
 
 
 def shell(cmd: str, confirm=None) -> dict:
-    if any(t in cmd for t in DESTRUCTIVE):
+    if not isinstance(cmd, str) or not cmd.strip():
+        return {"ok": False, "reason": "empty-command"}
+    if any(t in cmd.lower() for t in DESTRUCTIVE):
         if not confirm or not confirm(cmd):
             return {"ok": False, "reason": "blocked-destructive"}
+    if os.getenv("ULTRON_ALLOW_SHELL", "0") != "1":
+        return {"ok": False, "reason": "shell-disabled"}
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=120,
+        argv = shlex.split(cmd, posix=True)
+        if not argv:
+            return {"ok": False, "reason": "empty-command"}
+        r = subprocess.run(argv, shell=False, capture_output=True, text=True, timeout=120,
                            cwd=os.path.expanduser("~"))
         return {"ok": True, "rc": r.returncode, "out": r.stdout[:4000], "err": r.stderr[:2000]}
+    except ValueError as e:
+        return {"ok": False, "reason": f"invalid-command:{e}"}
     except Exception as e:  # noqa
         return {"ok": False, "reason": str(e)}
 

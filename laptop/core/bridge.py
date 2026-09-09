@@ -47,11 +47,30 @@ class Bridge:
 
     async def handler(self, reader, writer):
         peer_id = uuid.uuid4().hex[:12]
+        line_buffer = bytearray()
+        message_count = 0
+        window_start = asyncio.get_running_loop().time()
+
+        async def next_line() -> bytes:
+            while b"\n" not in line_buffer:
+                chunk = await reader.read(4096)
+                if not chunk:
+                    return b""
+                line_buffer.extend(chunk)
+                if len(line_buffer) > 65536:
+                    raise ValueError("message-too-large")
+            line, _, rest = line_buffer.partition(b"\n")
+            line_buffer[:] = rest
+            return bytes(line)
+
         try:
             # handshake: first line = PAIR <code-or-token>
-            line = (await reader.readline()).decode().strip()
+            line = (await next_line()).decode(errors="replace").strip()
             _, payload = (line.split(" ", 1) + [""])[:2]
-            if payload not in (self.pair_code, self.session_token):
+            accepted = {self.session_token}
+            if self.pair_code:
+                accepted.add(self.pair_code)
+            if not line.startswith("PAIR ") or payload not in accepted:
                 writer.write(b"DENIED\n")
                 await writer.drain()
                 return
@@ -59,7 +78,7 @@ class Bridge:
             # deadlock: client was waiting for a reply before sending hello).
             writer.write(b"OK\n")
             await writer.drain()
-            hello = (await reader.readline()).decode().strip()
+            hello = (await next_line()).decode(errors="replace").strip()
             info = json.loads(hello)
             self.peers[peer_id] = {"name": info.get("name", "peer"),
                                   "side": info.get("side", "?"),
@@ -71,9 +90,16 @@ class Bridge:
                                        "name": CFG.device_name, "side": "laptop-main",
                                        "state": {"brain": CFG.main_model}})
             while True:
-                raw = await reader.readline()
+                raw = await next_line()
                 if not raw:
                     break
+                now = asyncio.get_running_loop().time()
+                if now - window_start >= 60:
+                    window_start = now
+                    message_count = 0
+                message_count += 1
+                if message_count > 120:
+                    raise ValueError("rate-limit")
                 try:
                     msg = json.loads(raw.decode().strip())
                 except json.JSONDecodeError:
@@ -103,8 +129,18 @@ class Bridge:
                                             CFG.bridge_host, CFG.bridge_port)
         log("bridge", {"event": "listening", "port": CFG.bridge_port,
                       "qr": self.qr_payload(), "token": self.session_token})
-        async with server:
-            await server.serve_forever()
+
+        async def heartbeat():
+            while True:
+                await asyncio.sleep(20)
+                await self.broadcast({"type": "ping"})
+
+        heartbeat_task = asyncio.create_task(heartbeat())
+        try:
+            async with server:
+                await server.serve_forever()
+        finally:
+            heartbeat_task.cancel()
 
 
 def start_bridge_in_thread(bridge: "Bridge"):
