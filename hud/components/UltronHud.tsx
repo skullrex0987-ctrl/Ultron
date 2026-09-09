@@ -73,7 +73,7 @@ export default function UltronHud() {
     // bridge to core (audio level + transcript + link state)
     const bridge = new UltronBridge();
     bridgeRef.current = bridge;
-    bridge.on((m) => {
+    const removeBridgeHandler = bridge.on((m) => {
       if (m.type === "audio") scene.setAudioLevel(Number(m.level) || 0);
       if (m.type === "state") {
         const s = m.state as AgentState;
@@ -91,6 +91,8 @@ export default function UltronHud() {
 
     // mic -> Vosk happens in core; here we just send a "talk" trigger on hold/wake
     return () => {
+      removeBridgeHandler();
+      bridge.disconnect();
       trackerRef.current?.stop();
       trackerRef.current = null;
       scene.dispose();

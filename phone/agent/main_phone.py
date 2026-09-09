@@ -89,6 +89,10 @@ class PhoneAgent:
     # ---- WebSocket server (:8081) for web HUD + bridge ----
     async def handler(self, ws):
         self.hud_clients.add(ws)
+        peer = getattr(ws, "remote_address", None)
+        peer_host = peer[0] if isinstance(peer, tuple) and peer else ""
+        required_token = os.getenv("ULTRON_WS_TOKEN", "")
+        authenticated = peer_host in ("127.0.0.1", "::1")
         try:
             await ws.send(json.dumps({"type": "state", "state": "idle"}))
             await ws.send(json.dumps({"type": "transcript", "who": "ultron",
@@ -97,6 +101,13 @@ class PhoneAgent:
                 try:
                     m = json.loads(raw)
                 except Exception:
+                    continue
+                if not authenticated:
+                    if m.get("type") == "auth" and required_token and m.get("token") == required_token:
+                        authenticated = True
+                        await ws.send(json.dumps({"type": "auth", "ok": True}))
+                    else:
+                        await ws.send(json.dumps({"type": "error", "err": "auth"}))
                     continue
                 t = m.get("type")
                 if t == "transcript":
@@ -151,7 +162,8 @@ class PhoneAgent:
         self._send_hud_sync({"type": "transcript", "who": "user", "text": text})
         await self._send_hud({"type": "state", "state": "thinking"})
         try:
-            self.run_task(text, self.max_steps)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self.run_task, text, self.max_steps)
         except KeyboardInterrupt:
             self._send_hud_sync({"type": "transcript", "who": "ultron", "text": "Stopped."})
         finally:
@@ -228,9 +240,11 @@ class PhoneAgent:
     def status(self) -> dict:
         return {"device": CFG.device_name, "brain": CFG.mini_model,
                 "linked": self.linked,
-                "laptop": self.link.laptop if (self.link and self.linked) else None}
+                "laptop": {"linked": True} if self.linked else None}
 
     async def serve(self):
+        if not _HAVE_WS:
+            raise RuntimeError("websockets is required to serve the phone HUD")
         self.loop = asyncio.get_event_loop()
         ws_host = os.getenv("ULTRON_WS_HOST", "127.0.0.1")
         async with websockets.serve(self.handler, ws_host, 8081):

@@ -230,7 +230,10 @@ let ws; function connect(){try{ws=new WebSocket(`ws://${location.hostname}:8081`
       document.getElementById('pill').className='pill'+(m.state==='idle'?'':' '+m.state);
       document.getElementById('t').classList.toggle('on',m.state==='listen');}
     if(m.type==='transcript'){const t=document.getElementById('tr');
-      t.innerHTML+=`<div class="${m.who==='user'?'you':'ult'}">${m.who==='user'?'YOU':'ULTRON'}: ${m.text}</div>`;
+      const row=document.createElement('div');
+      row.className=m.who==='user'?'you':'ult';
+      row.textContent=(m.who==='user'?'YOU':'ULTRON')+': '+(m.text||'');
+      t.appendChild(row);
       t.scrollTop=t.scrollHeight;
       document.getElementById('trwrap').classList.remove('collapsed');}};
   ws.onclose=()=>{setTimeout(connect,2000);}; // auto-reconnect if agent restarts

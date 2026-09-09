@@ -184,6 +184,8 @@ class Core:
             log("core", {"event": "heal", "label": label, "state": state, "detail": detail})
 
     async def serve_hud(self):
+        if not _HAVE_WS:
+            raise RuntimeError("websockets is required to serve the ULTRON HUD")
         self.loop = asyncio.get_event_loop()
         # start native laptop-mic voice activation (offline "ultron" wake word)
         self.start_voice()

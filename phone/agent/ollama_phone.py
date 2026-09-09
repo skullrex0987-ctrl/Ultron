@@ -20,6 +20,43 @@ class Msg:
     content: str
 
 
+def _parse_json(content: str) -> dict:
+    c = (content or "").strip()
+    if c.startswith("```"):
+        parts = c.split("```", 2)
+        c = parts[1] if len(parts) > 1 else c
+        if c.lstrip().startswith("json"):
+            c = c.lstrip()[4:]
+    start = c.find("{")
+    if start < 0:
+        raise ValueError("no JSON object in model output")
+    depth = 0
+    in_str = False
+    escaped = False
+    end = -1
+    for i in range(start, len(c)):
+        ch = c[i]
+        if in_str:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end < 0:
+        raise ValueError("unbalanced JSON in model output")
+    return json.loads(c[start:end + 1].replace(",}", "}").replace(",]", "]"))
+
+
 class PhoneLLM:
     def __init__(self, host: Optional[str] = None, model: Optional[str] = None):
         self.host = (host or CFG.ollama_host).rstrip("/")
@@ -40,8 +77,8 @@ class PhoneLLM:
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
-        parsed = json.loads(content)
-        self.hist.append(Msg("assistant", content))
+        parsed = _parse_json(content)
+        self.hist.append(Msg("assistant", json.dumps(parsed)))
         return parsed
 
     def health(self) -> bool:

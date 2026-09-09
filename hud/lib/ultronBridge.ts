@@ -39,6 +39,15 @@ export class UltronBridge {
 
   on(h: Handler) {
     this.handlers.push(h);
+    return () => {
+      this.handlers = this.handlers.filter((item) => item !== h);
+    };
+  }
+
+  disconnect() {
+    this.ws?.close();
+    this.ws = null;
+    this.handlers = [];
   }
 
   send(m: UltronMsg) {

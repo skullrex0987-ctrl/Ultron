@@ -114,10 +114,10 @@ class HealthWatch:
     def add(self, label, check, recover=None):
         self.checks.append((label, check, recover))
 
-    def _state(self, s, detail=""):
+    def _state(self, label, s, detail=""):
         if self.on_state:
             try:
-                self.on_state(s, detail)
+                self.on_state(label, s, detail)
             except Exception:
                 pass
 

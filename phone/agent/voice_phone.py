@@ -73,7 +73,8 @@ class VoiceListener:
         except Exception as e:
             on_state("model-error:" + str(e)[:60])
             return
-        rec.SetWords(False)
+        if hasattr(rec, "SetWords"):
+            rec.SetWords(False)
         on_state("idle")
 
         def cb(indata, frames, t, status):
@@ -95,7 +96,8 @@ class VoiceListener:
                             phase = "command"
                             # reset recognizer to drop the wake word from transcript
                             rec = self.Kaldi(self.Model(self._model_path(self.lang)), 16000)
-                            rec.SetWords(False)
+                            if hasattr(rec, "SetWords"):
+                                rec.SetWords(False)
                     else:  # command phase: capture until a final result arrives
                         if rec.AcceptWaveform(b""):
                             final = json.loads(rec.FinalResult()).get("text", "").strip()
@@ -105,7 +107,8 @@ class VoiceListener:
                                 on_state("wake")
                                 phase = "wake"
                                 rec = self.Kaldi(self.Model(self._model_path(self.lang)), 16000)
-                                rec.SetWords(False)
+                                if hasattr(rec, "SetWords"):
+                                    rec.SetWords(False)
         except Exception as e:
             on_state("mic-error:" + str(e)[:60])
 

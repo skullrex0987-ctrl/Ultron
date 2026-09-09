@@ -66,7 +66,8 @@ class VoiceListener:
             # Cache the Model instance (expensive disk load) - only create KaldiRecognizer when needed
             self._cached_model = self.Model(self._model_path(self.lang))
             rec = self.Kaldi(self._cached_model, 16000)
-            rec.SetWords(False)
+            if hasattr(rec, "SetWords"):
+                rec.SetWords(False)
             on_state("idle")
 
             def cb(indata, frames, t, status):
@@ -88,7 +89,8 @@ class VoiceListener:
                                 phase = "command"
                                 # reset recognizer to drop the wake word from transcript (reuse cached Model)
                                 rec = self.Kaldi(self._cached_model, 16000)
-                                rec.SetWords(False)
+                                if hasattr(rec, "SetWords"):
+                                    rec.SetWords(False)
                         else:  # command phase: capture until a final result arrives
                             if rec.AcceptWaveform(b""):
                                 final = json.loads(rec.FinalResult()).get("text", "").strip()
