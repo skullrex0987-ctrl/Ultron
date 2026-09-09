@@ -28,7 +28,7 @@ jobs:
       - name: Secret scan
         shell: bash
         run: |
-          if git grep -n -I -E 'github_pat_|ghp_|BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}'; then
+          if git grep -n -I -E 'github_pat_|ghp_|BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}' -- ':!.github/workflows/ci.yml'; then
             echo 'Potential secret detected.'
             exit 1
           fi
