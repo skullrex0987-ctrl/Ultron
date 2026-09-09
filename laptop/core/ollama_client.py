@@ -1,16 +1,18 @@
-"""Ollama/local brain client - now backed by the pluggable provider layer.
+"""Ollama/local brain client - now backed by the pluggable provider layer with
+multi-provider fallback chain.
 
 Keeps the same chat()/intent-parsing API the rest of ULTRON expects, but the
-actual model call goes through providers.LLMProvider, so Ollama AND OpenRouter /
-TokenRouter / xKiro / OpenCode / OpenAI all work through one code path.
+actual model call goes through providers.LLMProvider chain, so Ollama AND
+OpenRouter / TokenRouter / xKiro / OpenCode / OpenAI / Anthropic all work
+through one code path with automatic failover.
 """
 from __future__ import annotations
 import json
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from config import CFG
-from providers import build_provider, LLMProvider
+from providers import build_provider, LLMProvider, build_provider_chain
 
 SYSTEM_PROMPT = """You are ULTRON, a local autonomous agent. You have tools.
 When the user asks for an action, respond with a JSON tool call:
@@ -23,7 +25,7 @@ Keep responses short. Available tools:
 - file_write: args: {"path": "...", "content": "..."}
 - web_fetch: args: {"url": "..."}
 - research: research a question on the web, returns an answer plus source URLs. args: {"query": "..."}
-- adb: control the linked Android phone. args: {"cmd": "tap X Y | swipe x1 y1 x2 y2 | text \"...\" | launch pkg | keyevent KEY"}
+- adb: control the linked Android phone. args: {"cmd": "tap X Y | swipe x1 y1 x2 y2 | text \\\"...\\\" | launch pkg | keyevent KEY"}
 - plan: break a goal into steps. args: {"goal": "..."}
 - reply: speak to the user. args: {"text": "..."}
 RULES:
@@ -86,52 +88,56 @@ class BrainClient:
     def __init__(self, provider: Optional[LLMProvider] = None, model: Optional[str] = None,
                  cloud: bool = None):
         self.model = model or CFG.main_model
-        if provider is None:
-            # local-first: Ollama by default
-            self.provider = build_provider("ollama", self.model)
-            # opt-in cloud fallback (Q10 B): wire a cloud provider if configured
-            self.cloud = None
-            use_cloud = CFG.use_cloud_fallback if cloud is None else cloud
-            if use_cloud and CFG.cloud_base_url and CFG.cloud_api_key:
-                name = CFG.cloud_provider or "openrouter"
-                self.cloud = build_provider(name, CFG.cloud_model or self.model,
-                                            api_key=CFG.cloud_api_key,
-                                            base_url=CFG.cloud_base_url)
-        else:
-            self.provider = provider
-            self.cloud = None
+        # Build provider chain (cloud-first, ollama fallback)
+        self.providers: List[LLMProvider] = build_provider_chain(CFG, self.model)
+        self._current_provider_idx = 0
         self.history: list[ChatMessage] = [ChatMessage("system", SYSTEM_PROMPT)]
         self._using_cloud = False
+        self._provider_name = "unknown"
+
+    @property
+    def provider(self) -> LLMProvider:
+        return self.providers[self._current_provider_idx] if self.providers else None
 
     def chat(self, user_text: str, max_steps: int = 15) -> dict:
-            self.history.append(ChatMessage("user", user_text))
-            msgs = [{"role": m.role, "content": m.content} for m in self.history]
+        self.history.append(ChatMessage("user", user_text))
+        msgs = [{"role": m.role, "content": m.content} for m in self.history]
+        
+        # Try each provider in chain until one succeeds
+        last_error = None
+        for i, prov in enumerate(self.providers):
+            self._current_provider_idx = i
             try:
-                raw = self.provider.chat(msgs)
-                self._using_cloud = False
-            except Exception:
-                # auto-reroute to cloud if available (Q10 B)
-                if self.cloud is not None:
-                    raw = self.cloud.chat(msgs)
-                    self._using_cloud = True
-                else:
-                    raise
-            parsed = _clean(raw)
-            # Store parsed content (tool call) instead of raw JSON output
-            self.history.append(ChatMessage("assistant", json.dumps(parsed)))
-            # Truncate history: keep system + last 10 user/assistant pairs (max 21 messages)
-            if len(self.history) > 21:
-                self.history = [self.history[0]] + self.history[-20:]
-            return parsed
+                raw = prov.chat(msgs)
+                self._using_cloud = (prov.cfg.name != "ollama")
+                self._provider_name = prov.cfg.name
+                break
+            except Exception as e:
+                last_error = e
+                continue
+        else:
+            # All providers failed
+            raise RuntimeError(f"All providers failed. Last error: {last_error}")
+        
+        parsed = _clean(raw)
+        # Store parsed content (tool call) instead of raw JSON output
+        self.history.append(ChatMessage("assistant", json.dumps(parsed)))
+        # Truncate history: keep system + last 10 user/assistant pairs (max 21 messages)
+        if len(self.history) > 21:
+            self.history = [self.history[0]] + self.history[-20:]
+        return parsed
 
     def health(self) -> bool:
-        if self.provider.health():
-            return True
-        return bool(self.cloud) and self.cloud.health()
+        for prov in self.providers:
+            if prov.health():
+                return True
+        return False
 
     @property
     def active_provider(self) -> str:
-        return "cloud" if self._using_cloud else "ollama"
+        if self._current_provider_idx < len(self.providers):
+            return self.providers[self._current_provider_idx].cfg.name
+        return "unknown"
 
     def ensure_model(self) -> bool:
         # Ollama auto-pull (Q13 A)
@@ -156,6 +162,7 @@ class BrainClient:
 if __name__ == "__main__":
     c = BrainClient()
     print("health:", c.health())
+    print("active provider:", c.active_provider)
     print("model ready:", c.ensure_model())
     if c.health():
         print("intent test:", c.chat("open youtube on my phone and search for cats"))

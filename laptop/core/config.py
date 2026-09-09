@@ -12,18 +12,24 @@ from typing import Optional
 @dataclass
 class Config:
     # --- LLM (main brain) ---
+    # ONLINE-FIRST: Cloud providers are default; Ollama is fallback
     ollama_host: str = field(default_factory=lambda: os.getenv("ULTRON_OLLAMA", "http://127.0.0.1:11434"))
-    main_model: str = field(default_factory=lambda: os.getenv("ULTRON_MAIN_MODEL", "qwen3.5:4b"))
+    main_model: str = field(default_factory=lambda: os.getenv("ULTRON_MAIN_MODEL", "anthropic/claude-3.5-sonnet"))  # Cloud default
     test_model: str = field(default_factory=lambda: os.getenv("ULTRON_TEST_MODEL", "qwen2.5:0.5b"))  # fast CI/test model
     # even smaller option per user request (135M)
     tiny_model: str = "smollm:135m"
     mini_model: str = field(default_factory=lambda: os.getenv("ULTRON_MINI_MODEL", "qwen3.5:0.8b"))
     # When linked, laptop can remote to phone's mini brain if its own is down.
-    use_cloud_fallback: bool = field(default_factory=lambda: os.getenv("ULTRON_CLOUD_FB", "0") == "1")
+    use_cloud_fallback: bool = field(default_factory=lambda: os.getenv("ULTRON_CLOUD_FB", "1") == "1")  # ENABLED by default
     cloud_provider: str = field(default_factory=lambda: os.getenv("ULTRON_CLOUD_PROV", "openrouter"))
     cloud_model: Optional[str] = field(default_factory=lambda: os.getenv("ULTRON_CLOUD_MODEL"))
     cloud_base_url: Optional[str] = field(default_factory=lambda: os.getenv("ULTRON_CLOUD_URL"))
     cloud_api_key: Optional[str] = field(default_factory=lambda: os.getenv("ULTRON_CLOUD_KEY"))
+
+    # Provider priority order (first available wins)
+    provider_priority: list = field(default_factory=lambda: [
+        "openrouter", "xkiro", "tokenrouter", "openai", "anthropic", "ollama"
+    ])
 
     # --- STT / TTS ---
     stt_engine: str = "vosk"          # laptop STT is browser-side; this is for headless CLI use

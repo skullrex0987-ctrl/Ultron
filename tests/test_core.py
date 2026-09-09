@@ -18,9 +18,10 @@ from agent import Agent, KillSwitch
 
 class TestConfig(unittest.TestCase):
     def test_models(self):
-        self.assertEqual(C.CFG.main_model, "qwen3.5:4b")
+        # Updated for online-first defaults
+        self.assertEqual(C.CFG.main_model, "anthropic/claude-3.5-sonnet")
         self.assertEqual(C.CFG.mini_model, "qwen3.5:0.8b")
-        self.assertEqual(C.CFG.model_for("main"), "qwen3.5:4b")
+        self.assertEqual(C.CFG.model_for("main"), "anthropic/claude-3.5-sonnet")
         self.assertEqual(C.CFG.model_for("mini"), "qwen3.5:0.8b")
 
 
