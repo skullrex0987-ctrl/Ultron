@@ -44,12 +44,16 @@ class TestToolRouting(unittest.TestCase):
 
     def test_file_write_read(self):
         import tempfile
-        p = os.path.join(tempfile.gettempdir(), "jarvis_test_file.txt")
-        dispatch({"tool": "file_write", "args": {"path": p, "content": "hi there"}})
-        r = dispatch({"tool": "file_read", "args": {"path": p}})
-        self.assertTrue(r["ok"])
-        self.assertEqual(r["content"], "hi there")
-        os.remove(p)
+        # Use a path within the sandbox root
+        sandbox = os.path.join(tempfile.gettempdir(), "ultron_test_workspace")
+        os.makedirs(sandbox, exist_ok=True)
+        with mock.patch.dict(os.environ, {"ULTRON_FS_ROOT": sandbox}):
+            p = os.path.join(sandbox, "jarvis_test_file.txt")
+            dispatch({"tool": "file_write", "args": {"path": p, "content": "hi there"}})
+            r = dispatch({"tool": "file_read", "args": {"path": p}})
+            self.assertTrue(r["ok"])
+            self.assertEqual(r["content"], "hi there")
+            os.remove(p)
 
     def test_destructive_blocked_without_confirm(self):
         r = dispatch({"tool": "shell", "args": {"cmd": "rm -rf /tmp/xxx"}})

@@ -1,9 +1,7 @@
 """Pluggable LLM provider layer.
 
-Supports local Ollama AND major cloud providers through ONE OpenAI-compatible
-interface. Online-first: Cloud providers are tried first; Ollama is fallback.
-All providers below speak the OpenAI chat completions shape, so swapping is
-just base_url + key + model.
+Supports local Ollama AND major cloud providers through ONE interface.
+Online-first: Cloud providers are tried first; Ollama is fallback.
 
 Verified base URLs (researched):
 - Ollama:        http://127.0.0.1:11434        (native /api/chat)
@@ -12,10 +10,12 @@ Verified base URLs (researched):
 - xKiro:         https://api.xkiro.com/v1       (OpenAI-compatible, key header x-api-key)
 - OpenCode:      http://localhost:PORT          (OpenAI-compatible local server; user-supplied)
 - OpenAI:        https://api.openai.com/v1      (OpenAI-native)
-- Anthropic:     https://api.anthropic.com/v1   (OpenAI-compatible via proxy)
+- Anthropic:     https://api.anthropic.com/v1   (Messages API, x-api-key auth)
+- DeepSeek:      https://api.deepseek.com/v1    (OpenAI-compatible)
 """
 from __future__ import annotations
 import json
+import time
 import urllib.request
 import urllib.error
 from dataclasses import dataclass, field
@@ -25,13 +25,14 @@ import os
 
 # Provider presets: base url + auth header style
 PROVIDERS: dict[str, dict] = {
-    "ollama":      {"base": "http://127.0.0.1:11434", "auth": "none",   "path": "/api/chat", "models_path": "/api/tags"},
+    "ollama":      {"base": "http://127.0.0.1:11434", "auth": "none",       "path": "/api/chat", "models_path": "/api/tags"},
     "openrouter":  {"base": "https://openrouter.ai/api/v1", "auth": "bearer", "path": "/chat/completions", "models_path": "/models"},
     "tokenrouter": {"base": "https://api.tokenrouter.com/v1", "auth": "bearer", "path": "/chat/completions", "models_path": "/models"},
     "xkiro":       {"base": "https://api.xkiro.com/v1", "auth": "x-api-key", "path": "/chat/completions", "models_path": "/models"},
     "opencode":    {"base": "http://localhost:8088", "auth": "bearer", "path": "/chat/completions", "models_path": "/models"},
     "openai":      {"base": "https://api.openai.com/v1", "auth": "bearer", "path": "/chat/completions", "models_path": "/models"},
-    "anthropic":   {"base": "https://api.anthropic.com/v1", "auth": "bearer", "path": "/messages", "models_path": "/models"},
+    "anthropic":   {"base": "https://api.anthropic.com/v1", "auth": "x-api-key", "path": "/messages", "models_path": "/models", "extra_headers": {"anthropic-version": "2023-06-01"}},
+    "deepseek":    {"base": "https://api.deepseek.com/v1", "auth": "bearer", "path": "/chat/completions", "models_path": "/models"},
 }
 
 
@@ -53,7 +54,7 @@ class ProviderConfig:
         p = PROVIDERS.get(self.name, PROVIDERS["ollama"])
         base = (self.base_url or p["base"]).rstrip("/")
         path = p["path"]
-        return {"base": base, "path": path, "auth": p["auth"], "models_path": p.get("models_path", "/models")}
+        return {"base": base, "path": path, "auth": p["auth"], "models_path": p.get("models_path", "/models"), "extra_headers": p.get("extra_headers", {})}
 
 
 class LLMProvider:
@@ -69,10 +70,11 @@ class LLMProvider:
         self._rate_limit()
         if self.cfg.use_ollama_native:
             return self._ollama(messages, temperature)
+        if self.cfg.name == "anthropic":
+            return self._anthropic(messages, max_tokens)
         return self._openai(messages, temperature, max_tokens)
 
     def _rate_limit(self):
-        import time
         now = time.time()
         # Remove requests older than 60 seconds
         self._request_times = [t for t in self._request_times if now - t < 60]
@@ -93,9 +95,27 @@ class LLMProvider:
                    "temperature": temperature, "max_tokens": max_tokens, "stream": False}
         return self._post(self.r["base"] + self.r["path"], payload)
 
+    def _anthropic(self, messages, max_tokens) -> str:
+        """Anthropic Messages API - different shape from OpenAI."""
+        # Extract system prompt from messages (if any)
+        system = None
+        anthropic_messages = []
+        for m in messages:
+            if m.get("role") == "system":
+                system = m.get("content", "")
+            else:
+                anthropic_messages.append(m)
+        
+        payload = {"model": self.cfg.model, "max_tokens": max_tokens, "messages": anthropic_messages}
+        if system:
+            payload["system"] = system
+        return self._post(self.r["base"] + self.r["path"], payload)
+
     def _post(self, url: str, payload: dict) -> str:
         data = json.dumps(payload).encode()
         headers = {"Content-Type": "application/json"}
+        # Add provider-specific extra headers (e.g., anthropic-version)
+        headers.update(self.r.get("extra_headers", {}))
         headers.update(self.cfg.extra_headers)
         if self.r["auth"] == "bearer" and self.cfg.api_key:
             headers["Authorization"] = f"Bearer {self.cfg.api_key}"
@@ -117,7 +137,7 @@ class LLMProvider:
                 raise RuntimeError("empty choices array")
             return body["choices"][0]["message"]["content"]
         if "content" in body:  # anthropic
-            # Anthropic returns {content: [{type: "text", text: "..."}]}
+            # Anthropic returns {content: [{type: "text", text: "..."}], ...}
             if isinstance(body["content"], list) and body["content"]:
                 return body["content"][0].get("text", "")
         raise RuntimeError(f"unknown response: {str(body)[:200]}")
@@ -130,6 +150,8 @@ class LLMProvider:
             # openai-style: hit /models
             url = self.r["base"] + self.r.get("models_path", "/models")
             headers = {}
+            headers.update(self.r.get("extra_headers", {}))
+            headers.update(self.cfg.extra_headers)
             if self.r["auth"] == "bearer" and self.cfg.api_key:
                 headers["Authorization"] = f"Bearer {self.cfg.api_key}"
             elif self.r["auth"] == "x-api-key" and self.cfg.api_key:
@@ -148,6 +170,8 @@ class LLMProvider:
                 return [m.get("name", "") for m in body.get("models", [])]
             url = self.r["base"] + self.r.get("models_path", "/models")
             headers = {}
+            headers.update(self.r.get("extra_headers", {}))
+            headers.update(self.cfg.extra_headers)
             if self.r["auth"] == "bearer" and self.cfg.api_key:
                 headers["Authorization"] = f"Bearer {self.cfg.api_key}"
             elif self.r["auth"] == "x-api-key" and self.cfg.api_key:
@@ -194,6 +218,8 @@ def build_provider_chain(config, model: str = None) -> List[LLMProvider]:
             api_key = os.getenv("OPENAI_API_KEY")
         elif prov_name == "anthropic":
             api_key = os.getenv("ANTHROPIC_API_KEY")
+        elif prov_name == "deepseek":
+            api_key = os.getenv("DEEPSEEK_API_KEY")
         
         if api_key or prov_name == "ollama":
             try:

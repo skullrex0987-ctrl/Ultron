@@ -5,6 +5,7 @@ path gives a structured node tree (perception mode C) for robust automation.
 No root required. Target = the linked phone (Poco X6 Pro).
 """
 from __future__ import annotations
+import os
 import subprocess
 import xml.etree.ElementTree as ET
 from typing import Optional

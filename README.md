@@ -1,31 +1,35 @@
 # 🛡️ ULTRON
 
-> **Offline-first AI assistant. Two linkable apps — your laptop and your phone — that work together on your own LAN. No cloud required.**
+> **Online-first, multi-provider AI assistant.** Two linkable apps — your laptop and your phone — that work together on your own LAN, with cloud-first intelligence.
 
-ULTRON is a privacy-minded personal AI assistant you run **entirely on your own
-hardware**. It ships as two independent apps that you can link into a single
-"mesh" over your local network:
+ULTRON is a personal AI assistant that runs **on your own hardware** but is
+**cloud-first by design** for maximum intelligence. It ships as two independent
+apps that you can link into a single "mesh" over your local network:
 
-- **Laptop app** — a Python "brain" (`qwen3.5:4b` via Ollama) plus a Next.js
-  holographic **orb HUD** you talk to in the browser.
-- **Phone app** — a lighter Termux Python "mini-brain" (`qwen3.5:0.8b`) plus a
-  small web orb HUD, Vosk speech-to-text (Hindi + English), Piper text-to-speech,
-  and self-control of the phone via ADB + Accessibility. A standalone **Android
-  APK** (Capacitor) bundles the orb too.
+- **Laptop app** — a Python "brain" with multi-provider cloud intelligence
+  (Claude, GPT, DeepSeek, OpenRouter) plus a Next.js holographic **orb HUD**
+  you talk to in the browser.
+- **Phone app** — a lighter Termux Python "mini-brain" plus a small web orb HUD,
+  Vosk speech-to-text (Hindi + English), Piper text-to-speech, and self-control
+  of the phone via ADB + Accessibility. A standalone **Android APK** (Capacitor)
+  bundles the orb too.
 
-Everything is **offline by default** — your data and your model never leave your
-devices. Cloud providers (OpenRouter, OpenAI, etc.) are an *optional, opt-in*
-fallback, never a requirement.
+ULTRON is **online-first**: it uses cloud providers (Claude, GPT, DeepSeek,
+OpenRouter) by default for the best experience. Local Ollama is available as
+an **optional offline fallback** for people who want it. You choose your provider
+via environment variables — no hardcoded keys, ever.
 
 ---
 
 ## ✨ Features
 
-- 🔒 **Fully offline** — local models via Ollama; no account, no API key, no telemetry.
+- ☁️ **Online-first, multi-provider** — cloud-first intelligence via Anthropic (Claude),
+  OpenAI (GPT), DeepSeek, and OpenRouter, with automatic failover between providers.
+- 🔒 **Optional offline mode** — local Ollama models for when you want fully local, private inference.
 - 💻📱 **Two apps, one mesh** — laptop and phone link over LAN into a full mesh:
   share a brain, mirror the orb, and cross-control devices.
-- 🧠 **Full model choice** — any local Ollama model, or any OpenAI-compatible
-  cloud/custom endpoint (OpenRouter, TokenRouter, xKiro, OpenCode, OpenAI).
+- 🧠 **Full model choice** — any of the four cloud providers (Claude, GPT, DeepSeek, OpenRouter)
+  or any local Ollama model, all through one interface.
 - 🗣️ **Speech in/out** — browser mic + Web Speech on laptop; Vosk (Hin+Eng) +
   Piper on phone.
 - 🎙️ **Offline voice activation (laptop + phone)** — say the wake word **"ultron"** and the

@@ -1,6 +1,6 @@
 """Hermes-style tool set - everything a Hermes agent can do (Q: both devices).
 
-Safe, sandboxed-ish local tools. shell is the powerful one; gated by a
+Safe, sandboxed local tools. shell is the powerful one; gated by a
 confirm callback for destructive commands when not in full-auto mode.
 """
 from __future__ import annotations
@@ -8,6 +8,9 @@ import os
 import subprocess
 import shlex
 import urllib.request
+import urllib.parse
+import ipaddress
+import socket
 from typing import Callable, Optional
 
 from config import CFG
@@ -21,7 +24,80 @@ DESTRUCTIVE = ("rm -rf", "mkfs", "dd if=", "format", "shutdown", "reboot",
 
 
 def _needs_confirm(cmd: str) -> bool:
+    """Check if a command needs confirmation using parsed argv."""
+    try:
+        argv = shlex.split(cmd, posix=(os.name != "nt"))
+    except ValueError:
+        return True  # Malformed commands are suspicious
+    if not argv:
+        return False
+    
+    # Check the base command and flags
+    base = argv[0].lower()
+    
+    # rm with recursive + force flags
+    if base in ("rm", "rmdir"):
+        flags = set(argv[1:])
+        if "-rf" in flags or "-fr" in flags or ("-r" in flags and "-f" in flags):
+            return True
+    
+    # Other destructive commands
+    destructive_bases = ("mkfs", "dd", "format", "shutdown", "reboot", "shred")
+    if base in destructive_bases:
+        return True
+    
+    # Check for command chaining with pipes to shell
+    if "|" in cmd and ("sh" in cmd or "bash" in cmd or "powershell" in cmd):
+        return True
+    
     return any(t in cmd for t in DESTRUCTIVE)
+
+
+def _resolve_fs_path(path: str) -> Optional[str]:
+    """Resolve a path and check it's within the sandbox root.
+    Returns the resolved path or None if outside sandbox.
+    """
+    # Get sandbox root from env, default to workspace/ in user home
+    sandbox_root = os.getenv("ULTRON_FS_ROOT", os.path.expanduser("~/ultron/workspace"))
+    sandbox_root = os.path.realpath(os.path.abspath(sandbox_root))
+    
+    # Resolve the requested path
+    requested = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+    
+    # Check if the resolved path is within sandbox
+    if not requested.startswith(sandbox_root + os.sep) and requested != sandbox_root:
+        return None
+    
+    return requested
+
+
+def _is_safe_url(url: str) -> bool:
+    """Check if a URL is safe to fetch (SSRF protection)."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except Exception:
+        return False
+    
+    # Only allow http/https schemes
+    if parsed.scheme not in ("http", "https"):
+        return False
+    
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+    
+    # Resolve hostname to IP and check for private/loopback addresses
+    try:
+        addr_info = socket.getaddrinfo(hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+        for family, type_, proto, canonname, sockaddr in addr_info:
+            ip = ipaddress.ip_address(sockaddr[0])
+            # Reject loopback, link-local, private ranges
+            if ip.is_loopback or ip.is_link_local or ip.is_private or ip.is_reserved:
+                return False
+    except (socket.gaierror, ValueError):
+        return False
+    
+    return True
 
 
 def shell(cmd: str, confirm: Optional[Callable[[str], bool]] = None) -> dict:
@@ -56,8 +132,12 @@ def shell(cmd: str, confirm: Optional[Callable[[str], bool]] = None) -> dict:
 
 def file_read(path: str) -> dict:
     log("tool", {"tool": "file_read", "path": path})
+    # Sandbox check
+    resolved = _resolve_fs_path(path)
+    if resolved is None:
+        return {"ok": False, "reason": "path-outside-sandbox"}
     try:
-        with open(os.path.expanduser(path), "r", encoding="utf-8", errors="replace") as f:
+        with open(resolved, "r", encoding="utf-8", errors="replace") as f:
             return {"ok": True, "content": f.read()[:20000]}
     except Exception as e:  # noqa
         return {"ok": False, "reason": str(e)}
@@ -65,10 +145,13 @@ def file_read(path: str) -> dict:
 
 def file_write(path: str, content: str) -> dict:
     log("tool", {"tool": "file_write", "path": path, "bytes": len(content)})
+    # Sandbox check
+    resolved = _resolve_fs_path(path)
+    if resolved is None:
+        return {"ok": False, "reason": "path-outside-sandbox"}
     try:
-        p = os.path.expanduser(path)
-        os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
-        with open(p, "w", encoding="utf-8") as f:
+        os.makedirs(os.path.dirname(resolved) or ".", exist_ok=True)
+        with open(resolved, "w", encoding="utf-8") as f:
             f.write(content)
         return {"ok": True}
     except Exception as e:  # noqa
@@ -77,6 +160,9 @@ def file_write(path: str, content: str) -> dict:
 
 def web_fetch(url: str) -> dict:
     log("tool", {"tool": "web_fetch", "url": url})
+    # SSRF protection
+    if not _is_safe_url(url):
+        return {"ok": False, "reason": "url-blocked"}
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "ultron/1.0"})
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -95,7 +181,7 @@ _TAG_RE = _re.compile(r"</?(?:think|thinking|scratchpad|system|tool_call|reasoni
                       _re.IGNORECASE)
 _BRACKET_RE = _re.compile(r"^\s*\[(?:system|assistant|user|internal|thinking)\]\s*:?\s*",
                           _re.IGNORECASE)
-_BULLET_RE = _re.compile(r"^(\s*)([*\u2022\u2013\u2014+])\s+")
+_BULLET_RE = _re.compile(r"^(\s*)([*\\u2022\\u2013\\u2014+])\s+")
 _BLANKS_RE = _re.compile(r"\n{3,}")
 
 

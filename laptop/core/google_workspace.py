@@ -6,7 +6,6 @@ locally and refreshed automatically. All methods are thread-safe.
 from __future__ import annotations
 import os
 import json
-import pickle
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -32,7 +31,7 @@ except ImportError:
 from config import CFG
 
 
-# Scopes needed for full workspace access
+# Scopes needed for implemented features
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.send",
@@ -43,10 +42,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive.metadata.readonly",
     "https://www.googleapis.com/auth/documents.readonly",
-    "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/spreadsheets.readonly",
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/contacts.readonly",
 ]
 
 
@@ -56,7 +52,7 @@ class GoogleConfig:
     credentials_file: str = field(default_factory=lambda: os.getenv(
         "ULTRON_GOOGLE_CREDS", os.path.expanduser("~/ultron/google_credentials.json")))
     token_file: str = field(default_factory=lambda: os.getenv(
-        "ULTRON_GOOGLE_TOKEN", os.path.expanduser("~/ultron/google_token.pickle")))
+        "ULTRON_GOOGLE_TOKEN", os.path.expanduser("~/ultron/google_token.json")))
     user_id: str = "me"  # Gmail user ID
 
 
@@ -76,8 +72,8 @@ class GoogleAuth:
 
             # Try to load existing token
             if os.path.exists(self.config.token_file):
-                with open(self.config.token_file, "rb") as f:
-                    self._creds = pickle.load(f)
+                with open(self.config.token_file, "r") as f:
+                    self._creds = Credentials.from_authorized_user_info(json.load(f))
 
             # Refresh if expired
             if self._creds and self._creds.expired and self._creds.refresh_token:
@@ -105,8 +101,13 @@ class GoogleAuth:
 
     def _save_credentials(self):
         Path(self.config.token_file).parent.mkdir(parents=True, exist_ok=True)
-        with open(self.config.token_file, "wb") as f:
-            pickle.dump(self._creds, f)
+        with open(self.config.token_file, "w") as f:
+            json.dump(json.loads(self._creds.to_json()), f, indent=2)
+        # Set restrictive permissions (owner read/write only)
+        try:
+            os.chmod(self.config.token_file, 0o600)
+        except Exception:
+            pass
 
     def revoke(self):
         """Revoke and delete stored credentials."""

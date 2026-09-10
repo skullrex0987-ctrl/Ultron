@@ -16,7 +16,7 @@ class TestGoogleConfig(unittest.TestCase):
     def test_default_paths(self):
         config = GoogleConfig()
         self.assertIn("google_credentials.json", config.credentials_file)
-        self.assertIn("google_token.pickle", config.token_file)
+        self.assertIn("google_token.json", config.token_file)
 
 
 class TestGoogleAuth(unittest.TestCase):
@@ -24,14 +24,15 @@ class TestGoogleAuth(unittest.TestCase):
     @mock.patch("google_workspace.InstalledAppFlow")
     @mock.patch("google_workspace.Credentials")
     @mock.patch("google_workspace.Request")
-    @mock.patch("google_workspace.pickle.dump")
-    def test_creds_refresh(self, mock_pickle_dump, mock_request, mock_creds_class, mock_flow_class):
+    @mock.patch("google_workspace.json.dump")
+    def test_creds_refresh(self, mock_json_dump, mock_request, mock_creds_class, mock_flow_class):
         # Mock expired credentials with refresh token
         mock_creds = mock.MagicMock()
         mock_creds.valid = False
         mock_creds.expired = True
         mock_creds.refresh_token = "refresh_token"
         mock_creds.refresh = mock.MagicMock()
+        mock_creds.to_json.return_value = '{"token": "test"}'
 
         # Mock the flow to not be called since refresh should work
         mock_flow = mock.MagicMock()
@@ -40,20 +41,21 @@ class TestGoogleAuth(unittest.TestCase):
 
         config = GoogleConfig(
             credentials_file="/fake/creds.json",
-            token_file="/fake/token.pickle"
+            token_file="/fake/token.json"
         )
 
         with mock.patch("os.path.exists", side_effect=[True, True]):  # token exists, creds file exists
-            with mock.patch("builtins.open", mock.mock_open(read_data=b"pickled_creds")):
-                with mock.patch("pickle.load", return_value=mock_creds):
-                    auth = GoogleAuth(config)
-                    creds = auth.get_credentials()
+            with mock.patch("builtins.open", mock.mock_open(read_data='{"token": "test"}')):
+                with mock.patch("json.load", return_value={"token": "test"}):
+                    with mock.patch("google_workspace.Credentials.from_authorized_user_info", return_value=mock_creds):
+                        auth = GoogleAuth(config)
+                        creds = auth.get_credentials()
 
         self.assertEqual(creds, mock_creds)
         mock_creds.refresh.assert_called_once_with(mock_request.return_value)
         # Flow should NOT be called since refresh worked
         mock_flow_class.from_client_secrets_file.assert_not_called()
-        mock_pickle_dump.assert_called_once()
+        mock_json_dump.assert_called_once()
 
 
 class TestGmailClient(unittest.TestCase):
