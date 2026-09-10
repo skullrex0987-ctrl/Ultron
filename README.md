@@ -1,108 +1,187 @@
 # 🛡️ ULTRON
 
-> **Online-first, multi-provider AI assistant.** Two linkable apps — your laptop and your phone — that work together on your own LAN, with cloud-first intelligence.
+> **Your personal AI assistant. Laptop + phone, linked. Cloud-first intelligence with optional offline mode.**
 
-ULTRON is a personal AI assistant that runs **on your own hardware** but is
-**cloud-first by design** for maximum intelligence. It ships as two independent
-apps that you can link into a single "mesh" over your local network:
+[![APK Download](https://img.shields.io/badge/📱_APK-Download-success?style=for-the-badge)](https://github.com/skullrex0987-ctrl/Ultron/raw/main/releases/ultron-v1.0.0.apk)
+[![Tests](https://img.shields.io/badge/✅-44_tests_passing-blue?style=for-the-badge)](tests/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python)](https://python.org)
 
-- **Laptop app** — a Python "brain" with multi-provider cloud intelligence
-  (Claude, GPT, DeepSeek, OpenRouter) plus a Next.js holographic **orb HUD**
-  you talk to in the browser.
-- **Phone app** — a lighter Termux Python "mini-brain" plus a small web orb HUD,
-  Vosk speech-to-text (Hindi + English), Piper text-to-speech, and self-control
-  of the phone via ADB + Accessibility. A standalone **Android APK** (Capacitor)
-  bundles the orb too.
+---
 
-ULTRON is **online-first**: it uses cloud providers (Claude, GPT, DeepSeek,
-OpenRouter) by default for the best experience. Local Ollama is available as
-an **optional offline fallback** for people who want it. You choose your provider
-via environment variables — no hardcoded keys, ever.
+## 📑 Table of Contents
+
+- [What is ULTRON?](#what-is-ultron)
+- [✨ Features](#-features)
+- [📱 Download APK](#-download-apk)
+- [🚀 Quick Start](#-quick-start)
+- [🏗️ Architecture](#️-architecture)
+- [📚 Documentation](#-documentation)
+- [🧠 Model Choice](#-model-choice)
+- [🔗 Mesh Linking](#-mesh-linking)
+- [🛡️ Safety](#️-safety)
+- [📂 Project Structure](#-project-structure)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+
+---
+
+## What is ULTRON?
+
+ULTRON is a **personal AI assistant** that runs on your own hardware. It ships as two independent apps that link into a single "mesh" over your local network:
+
+| Component | Technology | Description |
+|---|---|---|
+| **🖥️ Laptop Brain** | Python + Next.js | Main AI brain with holographic orb HUD |
+| **📱 Phone Agent** | Termux Python | Mini-brain with Vosk STT + Piper TTS |
+| **📱 Standalone APK** | Kotlin + llama.cpp | No Termux needed, local LLM inference |
+
+**Key principle:** ULTRON is **online-first** — it uses cloud providers (Claude, GPT, DeepSeek, OpenRouter) by default for maximum intelligence. Local Ollama is available as an **optional offline fallback**.
 
 ---
 
 ## ✨ Features
 
-- ☁️ **Online-first, multi-provider** — cloud-first intelligence via Anthropic (Claude),
-  OpenAI (GPT), DeepSeek, and OpenRouter, with automatic failover between providers.
-- 🔒 **Optional offline mode** — local Ollama models for when you want fully local, private inference.
-- 💻📱 **Two apps, one mesh** — laptop and phone link over LAN into a full mesh:
-  share a brain, mirror the orb, and cross-control devices.
-- 🧠 **Full model choice** — any of the four cloud providers (Claude, GPT, DeepSeek, OpenRouter)
-  or any local Ollama model, all through one interface.
-- 🗣️ **Speech in/out** — browser mic + Web Speech on laptop; Vosk (Hin+Eng) +
-  Piper on phone.
-- 🎙️ **Offline voice activation (laptop + phone)** — say the wake word **"ultron"** and the
-  assistant starts listening on **both** devices, fully offline (Vosk + `sounddevice`), no
-  button. A standalone `laptop/wake_ultron.py` wakes the laptop alone. Details in the
-  *Voice & Input* section below.
-- 🧾 **Structured output + research mode** — the agent produces formatted, sectioned answers
-  (lists / tables / steps) and can run a **research** mode that fetches web pages and replies
-  **with citations**.
-- ✋ **Gesture-reactive orb** — premium audio/gesture-reactive orb on laptop,
-  phone-web, and the standalone APK.
-- 🤖 **Hermes-style tools** — shell, file read/write, web fetch, and ADB device
-  control, all sandboxed and audit-logged.
-- 🪢 **Self-healing link** — if the laptop brain is down, the phone auto-falls
-  back to its own 0.8b model.
-- 🛑 **Safety built in** — global kill-switch file, per-task step cap, and
-  destructive-command confirmation. Every action is written to an audit log.
-- 🔧 **Self-healing** — every subsystem is supervised: crashes auto-restart with
-  backoff, a health watchdog monitors the brain (Ollama) + mic and tries to recover
-  (e.g. `ollama pull` the model if it's missing), and a stuck-task guard aborts
-  hung runs. The orb turns **red ("recovering")** when it's fixing itself.
-- 📦 **Build your own APK** — `phone/orb-apk/build-apk.sh` / `build-apk.ps1`.
+### ☁️ Multi-Provider Cloud Intelligence
+- **Anthropic (Claude)** · **OpenAI (GPT)** · **DeepSeek** · **OpenRouter**
+- Automatic failover between providers
+- No hardcoded keys — all via environment variables
+
+### 🔒 Optional Offline Mode
+- Local Ollama models (qwen3.5:4b, qwen3.5:0.8b, smollm:135m)
+- llama.cpp integration in standalone APK
+- Download GGUF models (qwen3, gemma, llama, phi)
+
+### 💻📱 Two Apps, One Mesh
+- Laptop and phone link over LAN
+- Full state exchange on connect
+- Cross-control devices (ADB, no root)
+
+### 🗣️ Speech In/Out
+- **Laptop:** Browser mic + Web Speech API
+- **Phone:** Vosk (Hindi + English) + Piper TTS
+- **Wake word:** Say "ultron" — fully offline, no button
+
+### 🎙️ Voice Activation
+| Device | Wake Word | Method |
+|---|---|---|
+| Laptop | "ultron" | `sounddevice` + Vosk |
+| Phone | "ultron" | Vosk (Hin+Eng) |
+| APK | Touch OR wake word | Android SpeechRecognizer |
+
+### ✋ Gesture-Reactive Orb
+- **PINCH** → Talk
+- **OPEN-PALM** → Listen
+- **PEACE** → Screenshot
+- **THUMBS-UP** → Volume
+- **SWIPE** → Prev/Next
+- **2-HAND** → Zoom
+
+### 🧾 Structured Output + Research Mode
+- Formatted, sectioned answers (lists/tables/steps)
+- Research mode fetches web pages and replies with citations
+
+### 🤖 Hermes-Style Tools
+- Shell, file read/write, web fetch, ADB device control
+- All sandboxed and audit-logged
+
+### 🛑 Safety Built In
+- Global kill-switch file
+- Per-task step cap (max 200)
+- Destructive-command confirmation
+- Every action written to audit log
+
+### 🔧 Self-Healing
+- Crashes auto-restart with backoff
+- Health watchdog monitors brain + mic
+- Stuck-task guard aborts hung runs
 
 ---
 
-## 🎙️ Voice & Input
+## 📱 Download APK
 
-ULTRON listens **and** types on every surface — your laptop, your phone (web orb and
-standalone APK), and a standalone laptop wake script.
+### **[⬇️ Download ULTRON v1.0.0 APK](https://github.com/skullrex0987-ctrl/Ultron/raw/main/releases/ultron-v1.0.0.apk)**
 
-### Voice activation
+| Property | Value |
+|---|---|
+| **Size** | 4.7 MB |
+| **Min Android** | 8.0 (API 26) |
+| **Target Android** | 14 (API 34) |
+| **Architectures** | arm64-v8a, x86_64 |
 
-Say the wake word **"ultron"** and the assistant starts listening — fully offline, no button,
-no cloud.
+### Install
 
-- **Laptop** — `laptop/core/stt_tts.py`'s `VoiceListener` owns the laptop mic directly via
-  `sounddevice` + Vosk (no browser permission click), listens continuously for the wake word,
-  then captures your command. The orb throbs on *listening* and reacts on *thinking*/*speaking*
-  (Iron-Man-style, offline).
-- **Phone** — `phone/agent/voice_phone.py` provides the same offline wake-word listening on the
-  device (Hindi + English Vosk), so you can trigger it hands-free on the phone too.
-- **Standalone laptop wake** — `laptop/wake_ultron.py` is a single script that voice-activates
-  the laptop **without** running the whole stack. Handy for a quick "ultron, …" from the shell.
+```bash
+# Via ADB
+adb install ultron-v1.0.0.apk
 
-> See `STEP_BY_STEP.md` Part 2 (laptop) and Part 3 (phone) for the exact wake flow.
+# Or download directly on phone browser
+# Settings → Security → Allow unknown sources → Install APK
+```
 
-### Input methods
+### After Install
 
-You can talk **or** type on every surface — pick whichever fits:
-
-- **Laptop HUD** — the orb HUD has a **TALK** button (browser mic) *and* a type box.
-- **Phone web HUD** — now has a type box alongside voice.
-- **APK (standalone orb app)** — now has a type box alongside voice / wake-word.
-- **Wake word** — say **"ultron"** on laptop or phone to start voice input without touching
-  anything.
-- **Gesture** — the orb stays gesture-reactive on laptop, phone-web, and the APK (MediaPipe
-  webcam/pose); unchanged.
+1. **First launch** → Grant permissions (mic, camera, storage)
+2. **Download a model** → Choose from qwen3:0.6b, gemma:2b, etc.
+3. **Or use cloud** → Set `OPENROUTER_API_KEY` in settings
+4. **Tap the ORB** → Start talking!
 
 ---
 
-## 📚 Documentation (start here)
+## 🚀 Quick Start
 
-New to ULTRON? Read these in order — they are written step by step:
+### Prerequisites
 
-- **[STEP_BY_STEP.md](STEP_BY_STEP.md)** — the *entire* project, from clone to a
-  linked laptop+phone mesh, in numbered steps.
-- **[phone/orb-apk/APK_BUILD.md](phone/orb-apk/APK_BUILD.md)** — every single step
-  to compile and install the ULTRON Orb APK, with troubleshooting.
-- [RUNBOOK.md](RUNBOOK.md) — quick run commands for each component.
-- [CONTRIBUTING.md](CONTRIBUTING.md) — how to add tools / model providers.
-- [SECURITY.md](SECURITY.md) — offline-by-default, kill-switch, report a vuln.
-- [ROADMAP.md](ROADMAP.md) — what's done vs planned.
-- [NOTES.md](NOTES.md) — build log / status.
+- **Python 3.11+**
+- **Node 18+**
+- **[Ollama](https://ollama.com)** (optional, for local models)
+
+### Laptop (Main Brain + Orb HUD)
+
+```bash
+# 1) Start Ollama (optional, for local models)
+ollama serve &
+ollama pull qwen3.5:4b
+
+# 2) Start the brain (WebSocket on :8766 + mesh bridge on :8765)
+cd laptop/core
+python main.py
+
+# 3) In a second terminal, start the orb HUD
+cd ../../hud
+npm install
+npm run dev          # open http://localhost:3000
+```
+
+### Phone (Termux Mini-Brain) — ONE LINE
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/skullrex0987-ctrl/Ultron/main/phone/install_termux.sh | bash
+```
+
+That single command installs everything: packages, clones this repo to `~/ultron`, Python deps, Ollama + the `qwen3.5:0.8b` mini-brain, Vosk models (Hin+Eng), and Piper TTS.
+
+Daily use:
+
+```bash
+ultron start     # launch the agent (WS :8081 + mesh)
+ultron test      # on-device self-test — everything should PASS
+ultron log       # live log (ultron stop / ultron update also work)
+```
+
+### Standalone APK (No Termux)
+
+```bash
+# Download APK
+curl -fsSL -o ~/ultron-orb.apk https://github.com/skullrex0987-ctrl/Ultron/raw/main/releases/ultron-v1.0.0.apk
+
+# Install
+adb install -r ~/ultron-orb.apk
+```
+
+Then in the app tap **⚙** and set the agent URL to `ws://127.0.0.1:8081`.
+
+---
 
 ## 🏗️ Architecture
 
@@ -126,113 +205,36 @@ New to ULTRON? Read these in order — they are written step by step:
            └── ADB control of phone (wireless, no root) ┘
                   + standalone Android APK: phone/orb-apk
 
-  Models: Ollama (local, default)  ── optional opt-in ──▶  Cloud / custom endpoint
+  Models: Cloud (Claude/GPT/DeepSeek/OpenRouter) ── default ──▶  Local Ollama (optional)
 ```
-
-On every connect the two brains exchange state (full mesh). If the laptop brain
-is unreachable, the phone automatically uses its own `0.8b` model so it keeps
-working.
 
 ---
 
-## 🚀 Quick Start
+## 📚 Documentation
 
-> Prereqs (one time): **Python 3.11+**, **Node 18+**, and **[Ollama](https://ollama.com)**.
-> `pip install websockets` for the laptop brain.
-
-### Laptop (main brain + orb HUD)
-
-```bash
-# 1) start Ollama with the main model (skip if already running)
-ollama serve &
-ollama pull qwen3.5:4b
-
-# 2) start the brain (WebSocket on :8766 + mesh bridge on :8765)
-cd laptop/core
-python main.py
-
-# 3) in a second terminal, start the orb HUD
-cd ../../hud
-npm install
-npm run dev          # open http://localhost:3000
-```
-
-The HUD's **TALK** button uses your browser mic (Web Speech API) → transcript → brain.
-
-### Phone (Termux mini-brain) — ONE LINE
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/skullrex0987-ctrl/Ultron/main/phone/install_termux.sh | bash
-```
-
-That single command installs everything: packages, clones this repo to `~/ultron`,
-Python deps, Ollama + the `qwen3.5:0.8b` mini-brain, Vosk models (Hin+Eng), and
-Piper TTS. It also installs the **`ultron` command** — daily use is then just:
-
-```bash
-ultron start     # launch the agent (WS :8081 + mesh)
-ultron test      # on-device self-test — everything should PASS
-ultron log       # live log (ultron stop / ultron update also work)
-```
-
-**Orb app (the gesture-controlled orb):** grab the latest universal APK —
-
-```bash
-curl -fsSL -o ~/ultron-orb.apk https://github.com/skullrex0987-ctrl/Ultron/releases/latest/download/ULTRON-Orb-universal.apk
-```
-
-Open the file, allow "install unknown apps", install, then in the app tap **⚙** and
-set the agent URL to `ws://127.0.0.1:8081`. Gestures: PINCH talk · OPEN-PALM listen ·
-PEACE screenshot · THUMBS-UP volume · SWIPE prev/next · 2-HAND zoom. Fully offline.
-
-**One-time (self-control via ADB, no root):**
-
-```bash
-adb tcpip 5555
-adb connect 127.0.0.1:5555        # loopback
-```
-
-The Kotlin **floating widget** (`phone/floating_widget`) can be built separately:
-tap = open, hold = talk, wake-word ready.
-
-> 💡 Full, copy-paste commands (incl. cloud/env wiring and Android wireless
-> debugging) live in **[RUNBOOK.md](RUNBOOK.md)**.
+| Document | Description |
+|---|---|
+| **[STEP_BY_STEP.md](STEP_BY_STEP.md)** | Entire project, from clone to linked mesh, in numbered steps |
+| **[RUNBOOK.md](RUNBOOK.md)** | Quick run commands for each component |
+| **[phone/orb-apk/APK_BUILD.md](phone/orb-apk/APK_BUILD.md)** | Every step to compile and install the APK |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to add tools / model providers |
+| **[SECURITY.md](SECURITY.md)** | Safety model, kill-switch, report a vuln |
+| **[ROADMAP.md](ROADMAP.md)** | What's done vs planned |
+| **[NOTES.md](NOTES.md)** | Build log / status |
 
 ---
 
-## 🔗 Linking the two devices (mesh)
+## 🧠 Model Choice
 
-Both apps are separate processes that discover and pair on your LAN.
+### Cloud Providers (Default)
 
-1. **Discover** — ULTRON uses mDNS (`_ultron._tcp.local.`) to find peers on the
-   same network automatically.
-2. **Pair** — three methods are supported:
-   - **(A)** shared **pair code** (default `ultron`, override with `ULTRON_PAIR_CODE`),
-   - **(B)** a **token**, or
-   - **(C)** a **QR code** shown by the laptop (`ultron://ip:port:token`).
-   The phone scans the QR or enters the code.
-3. **Connect** — on connect, the two brains exchange state. You can now:
-   - mirror the orb/agent between devices,
-   - send a **goal** from one HUD and have the other device execute it,
-   - let the laptop control the phone over ADB (wireless, no root).
+| Provider | Env Var | Example Model |
+|---|---|---|
+| **Anthropic (Claude)** | `ANTHROPIC_API_KEY` | `claude-3.5-sonnet` |
+| **OpenAI (GPT)** | `OPENAI_API_KEY` | `gpt-4o` |
+| **DeepSeek** | `DEEPSEEK_API_KEY` | `deepseek-chat` |
+| **OpenRouter** | `OPENROUTER_API_KEY` | `anthropic/claude-3.5-sonnet` |
 
-If the laptop brain goes down, the phone transparently falls back to its own
-`0.8b` model and keeps operating.
-
----
-
-## 🧠 Model choice
-
-ULTRON runs **any** model. Nothing here requires the internet.
-
-**Local (default, offline):**
-```bash
-ULTRON_MAIN_MODEL=qwen3.5:4b      # laptop main brain
-ULTRON_MINI_MODEL=qwen3.5:0.8b    # phone mini-brain
-# any Ollama model works: smollm:135m, qwen3.5:0.8b, ...
-```
-
-**Optional cloud / custom fallback (opt-in only):**
 ```bash
 ULTRON_CLOUD_FB=1 \
 ULTRON_CLOUD_PROV=openrouter \
@@ -241,136 +243,159 @@ ULTRON_CLOUD_KEY=sk-... \
 ULTRON_CLOUD_MODEL=anthropic/claude-3.5-sonnet \
 python laptop/core/main.py
 ```
-- Supported presets: **Ollama** (default/offline), **OpenRouter**,
-  **TokenRouter**, **xKiro**, **OpenCode**, **OpenAI**.
-- **Any custom endpoint**: `custom|http://host:port/v1|KEY|model-name`.
-- Selection logic lives in `laptop/core/models.py` (`choose("openrouter:gpt-4o")` →
-  provider) and the OpenAI-compatible layer in `laptop/core/providers.py`.
 
----
-
-## 📱 Build the Android APK
-
-The standalone **ULTRON Orb** app (Capacitor: Three.js + MediaPipe) is in
-`phone/orb-apk/`. Build scripts are provided for both shells:
-
-- `phone/orb-apk/build-apk.sh` — Linux / macOS / Termux
-- `phone/orb-apk/build-apk.ps1` — Windows (PowerShell)
-
-Requirements: **Node 18+**, `npx @capacitor/cli`, **JDK 17**, **Android SDK**
-(platform 34).
+### Local Models (Optional)
 
 ```bash
-cd phone/orb-apk
-./build-apk.sh          # (or: .\build-apk.ps1 on Windows)
-# → app/build/outputs/apk/debug/app-debug.apk
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+ULTRON_MAIN_MODEL=qwen3.5:4b      # laptop main brain
+ULTRON_MINI_MODEL=qwen3.5:0.8b    # phone mini-brain
 ```
 
-The script installs web assets, syncs the ULTRON Orb logo into the mipmaps, runs
-`capacitor sync`, and assembles the debug APK.
+### Supported Models for APK
 
-> 📖 **Full, every-step instructions (prereqs → install → clone → sync → build →
-> install → troubleshoot) are in
-> [phone/orb-apk/APK_BUILD.md](phone/orb-apk/APK_BUILD.md).** The scripts above
-> automate all of it, but the doc explains each stage so you can fix issues.
+| Model | Size | RAM Needed | Speed (SD8G2) |
+|---|---|---|---|
+| qwen3:0.6b | ~0.5GB | 2GB | ~30 t/s |
+| qwen2.5:0.5b | ~0.4GB | 2GB | ~35 t/s |
+| gemma:2b | ~1.5GB | 3GB | ~20 t/s |
+| qwen3:0.8b | ~0.7GB | 2.5GB | ~25 t/s |
+| qwen3:1.7b | ~1.2GB | 3GB | ~15 t/s |
+| llama3.2:1b | ~0.8GB | 2.5GB | ~20 t/s |
+| phi3.5:mini | ~2.5GB | 4GB | ~10 t/s |
 
 ---
 
-## 📂 Project structure
+## 🔗 Mesh Linking
+
+Both apps are separate processes that discover and pair on your LAN.
+
+1. **Discover** — ULTRON uses mDNS (`_ultron._tcp.local.`) to find peers on the same network automatically.
+2. **Pair** — three methods are supported:
+   - **(A)** shared **pair code** (default `ultron`, override with `ULTRON_PAIR_CODE`),
+   - **(B)** a **token**, or
+   - **(C)** a **QR code** shown by the laptop (`ultron://ip:port:token`).
+3. **Connect** — on connect, the two brains exchange state. You can now:
+   - mirror the orb/agent between devices,
+   - send a **goal** from one HUD and have the other device execute it,
+   - let the laptop control the phone over ADB (wireless, no root).
+
+If the laptop brain goes down, the phone transparently falls back to its own `0.8b` model and keeps operating.
+
+---
+
+## 🛡️ Safety
+
+| Feature | Description |
+|---|---|
+| **Kill-switch** | Create `/tmp/ultron_kill` → agent stops immediately |
+| **Step cap** | Max 200 steps per task (hard ceiling) |
+| **Destructive guards** | `rm -rf`, `mkfs`, `dd if=`, `format`, `shutdown`, `reboot` blocked without confirmation |
+| **Audit log** | Every action written to `audit.jsonl` |
+| **File sandbox** | `ULTRON_FS_ROOT` restricts file access |
+| **SSRF protection** | Web fetch blocks private/loopback addresses |
+| **HMAC integrity** | Audit log entries signed with HMAC-SHA256 |
+
+See **[SECURITY.md](SECURITY.md)** for the full safety model.
+
+---
+
+## 📂 Project Structure
 
 ```
-jarvis-ultron/
+UltrON/
 ├── laptop/
 │   └── core/                 # Laptop "brain"
 │       ├── main.py           # entry: brain WS :8766 + mesh bridge :8765
 │       ├── agent.py          # perceive → decide → act → verify loop
 │       ├── models.py         # model selection (local / cloud / custom)
-│       ├── providers.py      # pluggable OpenAI-compatible LLM layer
+│       ├── providers.py      # pluggable LLM layer (7 providers)
 │       ├── tools.py          # Hermes-style tools (shell, file, web, adb…)
 │       ├── bridge.py         # mesh bridge (discover / pair / relay)
 │       ├── android_control.py# ADB device control (no root)
 │       ├── perception.py     # screen/window perception
 │       ├── stt_tts.py        # Vosk + Piper
-│       ├── audit.py / audit.jsonl
-│       └── config.py
-│   └── hud/                  # (legacy placeholder — HUD is at repo root /hud)
-├── hud/                      # Next.js holographic orb HUD → npm run dev :3000
-│   ├── app/  components/  docs/
+│       ├── audit.py          # HMAC-signed audit logging
+│       ├── config.py         # configuration
+│       ├── memory.py         # persistent personal memory
+│       ├── google_workspace.py # Gmail/Calendar/Drive/Docs/Sheets
+│       ├── desktop_automation.py # Window/app control
+│       └── proactive_engine.py # Continuous observation
+│   └── hud/                  # Next.js holographic orb HUD
 ├── phone/
 │   ├── agent/                # Termux mini-brain (Python)
-│   │   ├── main_phone.py     # mini-brain qwen3.5:0.8b + WS :8081 + mesh
-│   │   ├── bridge_client.py  tools_phone.py  config_phone.py  …
-│   ├── web/                  # small orb web HUD → uvicorn :8080
-│   │   └── main_phone_web.py
-│   ├── floating_widget/      # Kotlin overlay (tap=open, hold=talk)
-│   └── orb-apk/              # Capacitor standalone Android app (the orb)
-│       ├── build-apk.sh / build-apk.ps1
-│       ├── android/  www/  index.html  capacitor.config.json
-├── core/                     # shared/legacy source scaffold
-├── tests/                    # 28 unit + E2E tests
-│   ├── test_core.py  test_e2e.py  test_mesh.py  test_laptop_ws.py
-│   └── test_perception.py  test_stt.py
-├── package.py                # zips laptop/phone/orb-apk bundles
-├── send_telegram.py          # optional notify helper
-├── RUNBOOK.md                # exact run commands
-├── NOTES.md                  # build log & verification status
-├── README.md
-└── LICENSE                   # MIT — see file
+│   ├── web/                  # Phone web orb HUD
+│   ├── floating_widget/      # Kotlin overlay
+│   └── orb-apk/              # Standalone Android APK
+│       ├── android/          # Android project with llama.cpp
+│       ├── app/build/outputs/apk/debug/app-debug.apk
+│       └── build-apk.sh / build-apk.ps1
+├── hud/                      # Next.js holographic orb HUD
+├── tests/                    # 44 tests (unit + E2E + mesh)
+├── releases/                 # APK downloads
+│   └── ultron-v1.0.0.apk
+├── docs/                     # Documentation
+├── RUNBOOK.md                # Quick run commands
+├── STEP_BY_STEP.md           # Full setup guide
+├── CONTRIBUTING.md           # How to contribute
+├── SECURITY.md               # Safety model
+├── ROADMAP.md                # What's done vs planned
+├── NOTES.md                  # Build log
+├── README.md                 # This file
+└── LICENSE                   # MIT
 ```
-
----
-
-## 🛡️ Safety / kill-switch
-
-ULTRON is built to be safe to run on your own machines:
-
-- **Offline by default** — no keys, no accounts, no network calls unless you opt in.
-- **Kill-switch** — create an empty file and the agent stops at its next step:
-  ```bash
-  touch /tmp/ultron_kill          # laptop
-  touch /tmp/ultron_phone_kill    # phone
-  ```
-  Path is overridable via the `ULTRON_KILL` env var.
-- **Step cap** — the agent asks you for a step count before every autonomous task,
-  and there is a hard ceiling of **200 steps** that cannot be exceeded.
-- **Destructive guards** — commands like `rm -rf`, `mkfs`, `dd if=`, `format`,
-  `shutdown`, `reboot`, `chmod -R`, `curl | sh`, `wget | sh` are **blocked unless
-  explicitly confirmed**.
-- **Audit log** — every action is appended to a JSONL log:
-  `laptop/core/audit.jsonl` (laptop) and `~/ultron/audit.jsonl` (phone).
-
-See **[SECURITY.md](SECURITY.md)** for the full safety model and how to report a
-vulnerability.
 
 ---
 
 ## 🤝 Contributing
 
-Pull requests are welcome! Whether it's a new tool, a new model provider, a bug
-fix, or docs — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to:
+Pull requests are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to:
 
-- add a tool,
-- add a model provider,
-- code style, and
-- run the test suite.
+- Add a tool
+- Add a model provider
+- Code style
+- Run the test suite
 
 ---
 
 ## 🗺️ Roadmap
 
-What's done and what's next is tracked in **[ROADMAP.md](ROADMAP.md)** (a
-user-friendly mirror of `NOTES.md`).
+What's done and what's next is tracked in **[ROADMAP.md](ROADMAP.md)**.
+
+| Status | Feature |
+|---|---|
+| ✅ | Laptop brain + orb HUD |
+| ✅ | Phone mini-brain + web HUD |
+| ✅ | Standalone APK with llama.cpp |
+| ✅ | Multi-provider cloud (Claude/GPT/DeepSeek/OpenRouter) |
+| ✅ | Local Ollama + GGUF models |
+| ✅ | Mesh linking (mDNS/pair-code/QR) |
+| ✅ | Voice activation (wake word) |
+| ✅ | Gesture-reactive orb |
+| ✅ | Self-healing subsystems |
+| ✅ | Persistent personal memory |
+| ✅ | Google Workspace integration |
+| ✅ | Desktop automation |
+| ✅ | Proactive assistant engine |
+| 🔜 | Encrypted mesh pairing |
+| 🔜 | Plugin system |
+| 🔜 | iOS orb |
 
 ---
 
 ## 📄 License
 
 Released under the **MIT License** — see the [LICENSE](LICENSE) file.
+
 Copyright © 2026 skullrex0987-ctrl.
 
 ---
 
 <p align="center">
-  <sub>ULTRON — your offline AI assistant. Laptop + phone, linked. No cloud required.</sub>
+  <b>ULTRON — Your personal AI assistant.</b><br>
+  Laptop + phone, linked. Cloud-first intelligence with optional offline mode.<br>
+  <br>
+  <a href="https://github.com/skullrex0987-ctrl/Ultron/raw/main/releases/ultron-v1.0.0.apk">📱 Download APK</a> ·
+  <a href="STEP_BY_STEP.md">📖 Get Started</a> ·
+  <a href="SECURITY.md">🛡️ Security</a> ·
+  <a href="ROADMAP.md">🗺️ Roadmap</a>
 </p>
