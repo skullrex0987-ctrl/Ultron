@@ -6,13 +6,10 @@ package com.ultron.orb.inference
 import android.content.Context
 import android.util.Log
 import java.io.File
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
 
 class InferenceManager(private val context: Context) {
     private var nativeHandle: Long = 0
-    private val executor = Executors.newSingleThreadExecutor()
-    private var currentFuture: Future<*>? = null
+    private var currentModelPath: String? = null
     private var isModelLoaded = false
 
     companion object {
@@ -45,67 +42,54 @@ class InferenceManager(private val context: Context) {
             return false
         }
 
-        isModelLoaded = nativeLoadModel(nativeHandle, path)
-        Log.d(TAG, "Model loaded: $isModelLoaded (${file.length() / 1024 / 1024}MB)")
-        return isModelLoaded
-    }
-
-    fun infer(prompt: String, callback: (String) -> Unit) {
-        if (!isModelLoaded) {
-            callback("No model loaded. Please download a model first.")
-            return
+        // Unload current model if any
+        if (isModelLoaded) {
+            unloadModel()
         }
 
-        currentFuture?.cancel(true)
-        currentFuture = executor.submit {
-            try {
-                val response = nativeInfer(nativeHandle, prompt)
-                callback(response)
-            } catch (e: Exception) {
-                Log.e(TAG, "Inference error", e)
-                callback("Error: ${e.message}")
-            }
+        val success = nativeLoadModel(nativeHandle, path)
+        if (success) {
+            currentModelPath = path
+            isModelLoaded = true
+            Log.d(TAG, "Model loaded: $path (${file.length() / 1024 / 1024}MB)")
+        } else {
+            Log.e(TAG, "Failed to load model")
         }
+        return success
     }
 
-    fun stopInference() {
-        currentFuture?.cancel(true)
-        if (nativeHandle != 0L) {
-            nativeStop(nativeHandle)
+    fun unloadModel() {
+        if (nativeHandle != 0L && isModelLoaded) {
+            nativeUnload(nativeHandle)
+            currentModelPath = null
+            isModelLoaded = false
+            Log.d(TAG, "Model unloaded")
         }
     }
 
-    fun release() {
-        stopInference()
-        if (nativeHandle != 0L) {
-            nativeDestroy(nativeHandle)
-            nativeHandle = 0
+    fun infer(prompt: String): String {
+        if (!isModelLoaded || nativeHandle == 0L) {
+            return "Error: No model loaded"
         }
-        executor.shutdown()
+        return nativeInfer(nativeHandle, prompt)
     }
 
     fun isModelLoaded(): Boolean = isModelLoaded
 
-    fun getContextSize(): Int = if (nativeHandle != 0L) nativeGetContextSize(nativeHandle) else 0
+    fun getCurrentModelPath(): String? = currentModelPath
 
-    fun setContextSize(size: Int) {
-        if (nativeHandle != 0L) nativeSetContextSize(nativeHandle, size)
+    fun release() {
+        unloadModel()
+        if (nativeHandle != 0L) {
+            nativeDestroy(nativeHandle)
+            nativeHandle = 0
+        }
     }
 
-    fun getGpuLayers(): Int = if (nativeHandle != 0L) nativeGetGpuLayers(nativeHandle) else 0
-
-    fun setGpuLayers(layers: Int) {
-        if (nativeHandle != 0L) nativeSetGpuLayers(nativeHandle, layers)
-    }
-
-    // Native methods (implemented in C++ via JNI)
+    // Native methods
     private external fun nativeCreate(): Long
     private external fun nativeDestroy(handle: Long)
     private external fun nativeLoadModel(handle: Long, path: String): Boolean
+    private external fun nativeUnload(handle: Long)
     private external fun nativeInfer(handle: Long, prompt: String): String
-    private external fun nativeStop(handle: Long)
-    private external fun nativeGetContextSize(handle: Long): Int
-    private external fun nativeSetContextSize(handle: Long, size: Int)
-    private external fun nativeGetGpuLayers(handle: Long): Int
-    private external fun nativeSetGpuLayers(handle: Long, layers: Int)
 }

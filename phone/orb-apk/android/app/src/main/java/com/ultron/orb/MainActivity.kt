@@ -1,216 +1,166 @@
 // ULTRON Android - MainActivity.kt
-// Standalone APK with local LLM inference (llama.cpp) + ORB + gestures
+// Main activity with model management bridge
 
 package com.ultron.orb
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.NonNull
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.ultron.orb.databinding.ActivityMainBinding
-import com.ultron.orb.inference.InferenceManager
-import com.ultron.orb.ui.OrbView
-import com.ultron.orb.gesture.GestureManager
+import com.ultron.orb.bridge.ModelBridge
 import com.ultron.orb.model.ModelManager
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
-    private lateinit var orbView: OrbView
-    private lateinit var inferenceManager: InferenceManager
-    private lateinit var gestureManager: GestureManager
+    
+    private lateinit var webView: WebView
     private lateinit var modelManager: ModelManager
-
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (allGranted) {
-            initializeApp()
-        } else {
-            Toast.makeText(this, "Permissions required for full functionality", Toast.LENGTH_LONG).show()
-        }
-    }
-
+    private lateinit var modelBridge: ModelBridge
+    
+    private static final int PERMISSION_REQUEST_CODE = 1001
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
+        
         // Initialize managers
         modelManager = ModelManager(this)
-        inferenceManager = InferenceManager(this)
-        orbView = OrbView(binding.orbContainer)
-        gestureManager = GestureManager(this, orbView)
-
-        // Check permissions
-        checkPermissions()
-
-        // Setup UI
-        setupUI()
+        modelBridge = ModelBridge(webView, modelManager)
+        
+        // Setup WebView
+        setupWebView()
+        
+        // Request permissions
+        requestRequiredPermissions()
+        
+        // Load the orb interface
+        webView.loadUrl("file:///android_asset/public/index.html")
     }
-
-    private fun checkPermissions() {
+    
+    private fun setupWebView() {
+        webView = WebView(this)
+        setContentView(webView)
+        
+        val settings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.allowFileAccess = true
+        settings.allowContentAccess = true
+        settings.mediaPlaybackRequiresUserGesture = false
+        settings.javaScriptCanOpenWindowsAutomatically = true
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // Inject model bridge into JavaScript
+                injectModelBridge()
+            }
+        }
+        
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                request?.grant(request.resources)
+            }
+        }
+        
+        // Add JavaScript interface
+        webView.addJavascriptInterface(modelBridge, "AndroidModelBridge")
+    }
+    
+    private fun injectModelBridge() {
+        // Make model bridge available to JavaScript
+        webView.evaluateJavascript("""
+            window.ModelBridge = {
+                getAvailableModels: function() {
+                    return AndroidModelBridge.getAvailableModels();
+                },
+                getModelStatus: function(modelId) {
+                    return AndroidModelBridge.getModelStatus(modelId);
+                },
+                getAllModelStatuses: function() {
+                    return AndroidModelBridge.getAllModelStatuses();
+                },
+                downloadModel: function(modelId) {
+                    AndroidModelBridge.downloadModel(modelId);
+                },
+                loadModel: function(modelId) {
+                    AndroidModelBridge.loadModel(modelId);
+                },
+                unloadModel: function() {
+                    AndroidModelBridge.unloadModel();
+                },
+                deleteModel: function(modelId) {
+                    AndroidModelBridge.deleteModel(modelId);
+                },
+                getStorageInfo: function() {
+                    return AndroidModelBridge.getStorageInfo();
+                },
+                getLoadedModelId: function() {
+                    return AndroidModelBridge.getLoadedModelId();
+                },
+                isModelLoaded: function() {
+                    return AndroidModelBridge.isModelLoaded();
+                }
+            };
+        """, null)
+    }
+    
+    private fun requestRequiredPermissions() {
         val permissions = mutableListOf<String>()
+        
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
+            != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.CAMERA)
+        }
         
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
             != PackageManager.PERMISSION_GRANTED) {
             permissions.add(Manifest.permission.RECORD_AUDIO)
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
-            != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.CAMERA)
-        }
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
                 != PackageManager.PERMISSION_GRANTED) {
                 permissions.add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-
+        
         if (permissions.isNotEmpty()) {
-            requestPermissionLauncher.launch(permissions.toTypedArray())
-        } else {
-            initializeApp()
+            ActivityCompat.requestPermissions(this, 
+                permissions.toTypedArray(), 
+                PERMISSION_REQUEST_CODE)
         }
     }
-
-    private fun initializeApp() {
-        // Initialize llama.cpp native library
-        inferenceManager.initialize()
-
-        // Load default or last used model
-        val lastModel = modelManager.getLastUsedModel()
-        if (lastModel != null && modelManager.modelExists(lastModel)) {
-            inferenceManager.loadModel(modelManager.getModelPath(lastModel))
-        } else {
-            // Show model download dialog on first launch
-            showModelDownloadDialog()
-        }
-
-        // Start gesture recognition
-        gestureManager.start()
-
-        // Setup chat interface
-        setupChat()
-    }
-
-    private fun setupUI() {
-        // Model selector
-        binding.btnModelSelector.setOnClickListener {
-            showModelSelector()
-        }
-
-        // Settings
-        binding.btnSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-
-        // Mic button for voice input
-        binding.btnMic.setOnClickListener {
-            toggleVoiceInput()
-        }
-
-        // Text input
-        binding.btnSend.setOnClickListener {
-            val text = binding.etInput.text.toString().trim()
-            if (text.isNotEmpty()) {
-                sendMessage(text)
-            }
-        }
-
-        // Gesture button
-        binding.btnGesture.setOnClickListener {
-            gestureManager.toggleGestureMode()
-        }
-    }
-
-    private fun setupChat() {
-        orbView.setOnOrbClickListener {
-            toggleVoiceInput()
-        }
-    }
-
-    private fun sendMessage(text: String) {
-        // Add user message to chat
-        addMessage(text, isUser = true)
-        binding.etInput.setText("")
-
-        // Show thinking state
-        orbView.setState(OrbView.State.THINKING)
-
-        // Run inference
-        inferenceManager.infer(text) { response ->
-            runOnUiThread {
-                addMessage(response, isUser = false)
-                orbView.setState(OrbView.State.IDLE)
-            }
-        }
-    }
-
-    private fun addMessage(text: String, isUser: Boolean) {
-        // Add message to RecyclerView
-        val adapter = binding.rvChat.adapter as? ChatAdapter
-        adapter?.addMessage(Message(text, isUser))
-        binding.rvChat.scrollToPosition(adapter?.itemCount?.minus(1) ?: 0)
-    }
-
-    private fun toggleVoiceInput() {
-        if (gestureManager.isListening()) {
-            gestureManager.stopListening()
-            orbView.setState(OrbView.State.IDLE)
-        } else {
-            gestureManager.startListening { text ->
-                sendMessage(text)
-            }
-            orbView.setState(OrbView.State.LISTENING)
-        }
-    }
-
-    private fun showModelDownloadDialog() {
-        val dialog = ModelDownloadDialog(this) { model ->
-            downloadModel(model)
-        }
-        dialog.show()
-    }
-
-    private fun showModelSelector() {
-        val dialog = ModelSelectorDialog(this, modelManager.getAvailableModels()) { model ->
-            loadModel(model)
-        }
-        dialog.show()
-    }
-
-    private fun downloadModel(model: ModelInfo) {
-        orbView.setState(OrbView.State.THINKING)
-        modelManager.downloadModel(model) { success ->
-            runOnUiThread {
-                if (success) {
-                    loadModel(model)
-                } else {
-                    Toast.makeText(this, "Download failed", Toast.LENGTH_SHORT).show()
-                    orbView.setState(OrbView.State.IDLE)
+    
+    override fun onRequestPermissionsResult(requestCode: Int, @NonNull permissions: Array<out String>, @NonNull grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            var allGranted = true
+            for (result in grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false
+                    break
                 }
             }
+            
+            if (!allGranted) {
+                Toast.makeText(this, "Camera and microphone permissions required for gestures and voice", Toast.LENGTH_LONG).show()
+            }
         }
     }
-
-    private fun loadModel(model: ModelInfo) {
-        orbView.setState(OrbView.State.THINKING)
-        inferenceManager.loadModel(modelManager.getModelPath(model.id))
-        modelManager.setLastUsedModel(model.id)
-        binding.tvModelName.text = model.displayName
-        orbView.setState(OrbView.State.IDLE)
-        Toast.makeText(this, "Loaded ${model.displayName}", Toast.LENGTH_SHORT).show()
-    }
-
+    
     override fun onDestroy() {
         super.onDestroy()
-        gestureManager.stop()
-        inferenceManager.release()
+        webView.destroy()
     }
 }
