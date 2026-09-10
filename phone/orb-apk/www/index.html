@@ -55,18 +55,34 @@
     background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.25) 2px,rgba(0,0,0,.25) 4px); }
   .vig { position:fixed; inset:0; z-index:7; pointer-events:none;
     background:radial-gradient(ellipse at center,transparent 38%,rgba(0,0,0,.72)); }
-  /* settings sheet */
+  
+  /* Settings sheet */
   #cfg { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.92); display:none;
-    align-items:center; justify-content:center; }
+    align-items:center; justify-content:center; overflow-y:auto; }
   #cfg .card { width:min(420px,92vw); border:1px solid var(--amber); border-radius:10px;
-    background:rgba(20,10,0,.95); padding:22px; }
+    background:rgba(20,10,0,.95); padding:22px; margin:20px; max-height:90vh; overflow-y:auto; }
   #cfg h2 { font-size:13px; letter-spacing:.3em; margin-bottom:16px; color:var(--hot); }
+  #cfg h3 { font-size:11px; letter-spacing:.2em; margin:16px 0 8px; color:var(--amber); }
   #cfg label { display:block; font-size:10px; opacity:.8; margin:12px 0 4px; letter-spacing:.15em; }
-  #cfg input { width:100%; background:#000; border:1px solid var(--amber); color:var(--hot);
+  #cfg input, #cfg select { width:100%; background:#000; border:1px solid var(--amber); color:var(--hot);
     font-family:inherit; font-size:13px; padding:10px; border-radius:6px; }
-  #cfg .row { display:flex; gap:8px; margin-top:18px; justify-content:flex-end; }
+  #cfg .row { display:flex; gap:8px; margin-top:18px; justify-content:space-between; }
+  #cfg .model-list { max-height:200px; overflow-y:auto; border:1px solid rgba(255,170,48,.3); border-radius:6px; padding:8px; }
+  #cfg .model-item { display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid rgba(255,170,48,.1); }
+  #cfg .model-item:last-child { border-bottom:none; }
+  #cfg .model-name { font-size:11px; color:var(--hot); }
+  #cfg .model-size { font-size:9px; opacity:.6; }
+  #cfg .model-status { font-size:9px; padding:2px 6px; border-radius:3px; }
+  #cfg .model-status.downloaded { background:rgba(102,255,153,.2); color:var(--ok); }
+  #cfg .model-status.download { background:rgba(102,204,255,.2); color:var(--ice); }
+  
   #boot { position:fixed; inset:0; z-index:30; background:#000; display:flex;
     align-items:center; justify-content:center; font-size:12px; letter-spacing:.4em; color:var(--amber); }
+  #perm { position:fixed; inset:0; z-index:25; background:rgba(0,0,0,.95); display:none;
+    align-items:center; justify-content:center; flex-direction:column; padding:20px; text-align:center; }
+  #perm h2 { font-size:14px; letter-spacing:.2em; margin-bottom:20px; color:var(--hot); }
+  #perm p { font-size:11px; line-height:1.6; max-width:300px; margin-bottom:20px; opacity:.8; }
+  #perm button { margin:10px; }
 </style>
 </head>
 <body>
@@ -91,13 +107,38 @@
     <button id="t">TALK</button>
   </div>
 
+  <!-- Permission Request Modal -->
+  <div id="perm">
+    <h2>PERMISSIONS REQUIRED</h2>
+    <p>ULTRON needs camera access for hand gestures and microphone access for voice input.</p>
+    <button id="perm-camera">GRANT CAMERA</button>
+    <button id="perm-mic">GRANT MICROPHONE</button>
+    <button id="perm-skip" class="sm">SKIP</button>
+  </div>
+
+  <!-- Settings Sheet -->
   <div id="cfg">
     <div class="card">
       <h2>SETTINGS</h2>
+      
+      <h3>AGENT CONNECTION</h3>
       <label>ULTRON AGENT (Termux) — ws://IP:8081</label>
       <input id="cfg-url" placeholder="ws://127.0.0.1:8081" />
       <label>VOICE REACTIVITY (mic drives the orb)</label>
       <input id="cfg-mic" placeholder="on / off" />
+      
+      <h3>LOCAL LLM MODELS</h3>
+      <label>Download models for offline inference (GGUF format)</label>
+      <div class="model-list" id="model-list"></div>
+      
+      <h3>CLOUD PROVIDERS</h3>
+      <label>OpenRouter API Key (optional)</label>
+      <input id="cfg-openrouter" placeholder="sk-or-..." type="password" />
+      <label>Anthropic API Key (optional)</label>
+      <input id="cfg-anthropic" placeholder="sk-ant-..." type="password" />
+      <label>OpenAI API Key (optional)</label>
+      <input id="cfg-openai" placeholder="sk-..." type="password" />
+      
       <div class="row">
         <button id="cfg-x" class="sm">CANCEL</button>
         <button id="cfg-s" class="sm">SAVE</button>
@@ -107,9 +148,7 @@
   <div id="boot">U.L.T.R.O.N.</div>
 
 <script>
-  // SAFETY NET (plain script — runs even if the module below fails entirely).
-  // Clears the splash no matter what, and shows a visible error if the orb
-  // engine failed to boot (instead of a frozen U.L.T.R.O.N. screen).
+  // SAFETY NET
   window.addEventListener("error", function (e) {
     var b = document.getElementById("boot");
     if (b) {
@@ -124,7 +163,7 @@
   });
   setTimeout(function () {
     var b = document.getElementById("boot");
-    if (b) b.remove();   // hard fallback: never stay stuck on the splash
+    if (b) b.remove();
   }, 5000);
 </script>
 
@@ -144,14 +183,115 @@ import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 const S = {
   url: localStorage.getItem("ultron.agent") || `ws://127.0.0.1:8081`,
   mic: localStorage.getItem("ultron.mic") !== "off",
+  openrouter: localStorage.getItem("ultron.openrouter") || "",
+  anthropic: localStorage.getItem("ultron.anthropic") || "",
+  openai: localStorage.getItem("ultron.openai") || "",
 };
 const boot = document.getElementById("boot");
 setTimeout(()=>boot.remove(), 1400);
+
+/* ============================== PERMISSIONS ============================== */
+const permModal = document.getElementById("perm");
+const camPermBtn = document.getElementById("perm-camera");
+const micPermBtn = document.getElementById("perm-mic");
+const skipBtn = document.getElementById("perm-skip");
+
+function checkPermissions() {
+  if (navigator.permissions) {
+    Promise.all([
+      navigator.permissions.query({ name: "camera" }),
+      navigator.permissions.query({ name: "microphone" })
+    ]).then(results => {
+      const camGranted = results[0].state === "granted";
+      const micGranted = results[1].state === "granted";
+      if (!camGranted || !micGranted) {
+        permModal.style.display = "flex";
+      }
+    }).catch(() => {
+      // Permissions API not supported, show modal anyway
+      permModal.style.display = "flex";
+    });
+  } else {
+    permModal.style.display = "flex";
+  }
+}
+
+camPermBtn.onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    stream.getTracks().forEach(t => t.stop());
+    checkPermissions();
+  } catch(e) {
+    alert("Camera permission denied. Gestures will not work.");
+  }
+};
+
+micPermBtn.onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+    checkPermissions();
+  } catch(e) {
+    alert("Microphone permission denied. Voice input will not work.");
+  }
+};
+
+skipBtn.onclick = () => {
+  permModal.style.display = "none";
+};
+
+// Check permissions on load
+setTimeout(checkPermissions, 1000);
+
+/* ============================== SETTINGS UI ============================== */
+const models = [
+  { id: "qwen3_0.6b", name: "Qwen3 0.6B", size: "0.5GB", url: "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf" },
+  { id: "qwen2.5_0.5b", name: "Qwen2.5 0.5B", size: "0.4GB", url: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf" },
+  { id: "gemma_2b", name: "Gemma 2B", size: "1.5GB", url: "https://huggingface.co/google/gemma-2b-it-GGUF/resolve/main/gemma-2b-it-q4_k_m.gguf" },
+  { id: "qwen3_0.8b", name: "Qwen3 0.8B", size: "0.7GB", url: "https://huggingface.co/Qwen/Qwen3-0.8B-GGUF/resolve/main/Qwen3-0.8B-Q4_K_M.gguf" },
+];
+
+function renderModelList() {
+  const list = document.getElementById("model-list");
+  list.innerHTML = models.map(m => `
+    <div class="model-item">
+      <div>
+        <div class="model-name">${m.name}</div>
+        <div class="model-size">${m.size}</div>
+      </div>
+      <span class="model-status download" data-id="${m.id}">DOWNLOAD</span>
+    </div>
+  `).join("");
+  
+  list.querySelectorAll(".model-status").forEach(btn => {
+    btn.onclick = () => {
+      const model = models.find(m => m.id === btn.dataset.id);
+      if (model) downloadModel(model, btn);
+    };
+  });
+}
+
+function downloadModel(model, btn) {
+  btn.textContent = "DOWNLOADING...";
+  btn.style.opacity = "0.6";
+  
+  // In a real implementation, this would download the GGUF file
+  // For now, show a message
+  setTimeout(() => {
+    alert(`Model download requires native Android implementation.\n\nTo add models manually:\n1. Download ${model.name} GGUF from HuggingFace\n2. Place in /sdcard/ultron/models/\n3. Restart the app`);
+    btn.textContent = "DOWNLOAD";
+    btn.style.opacity = "1";
+  }, 1000);
+}
 
 document.getElementById("c").onclick = () => {
   document.getElementById("cfg").style.display = "flex";
   document.getElementById("cfg-url").value = S.url;
   document.getElementById("cfg-mic").value = S.mic ? "on" : "off";
+  document.getElementById("cfg-openrouter").value = S.openrouter;
+  document.getElementById("cfg-anthropic").value = S.anthropic;
+  document.getElementById("cfg-openai").value = S.openai;
+  renderModelList();
 };
 document.getElementById("cfg-x").onclick = () =>
   document.getElementById("cfg").style.display = "none";
@@ -160,11 +300,17 @@ document.getElementById("cfg-s").onclick = () => {
   const m = document.getElementById("cfg-mic").value.trim().toLowerCase();
   if (u) { S.url = u; localStorage.setItem("ultron.agent", u); }
   S.mic = m !== "off"; localStorage.setItem("ultron.mic", S.mic ? "on" : "off");
+  S.openrouter = document.getElementById("cfg-openrouter").value.trim();
+  S.anthropic = document.getElementById("cfg-anthropic").value.trim();
+  S.openai = document.getElementById("cfg-openai").value.trim();
+  localStorage.setItem("ultron.openrouter", S.openrouter);
+  localStorage.setItem("ultron.anthropic", S.anthropic);
+  localStorage.setItem("ultron.openai", S.openai);
   document.getElementById("cfg").style.display = "none";
   location.reload();
 };
 
-/* ============================== ORB (offline, vendored) ============================== */
+/* ============================== ORB ============================== */
 const C = { amber:0xffaa30, hot:0xffcc66, ice:0x66ccff, mid:0xdd7700 };
 const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,500);
 cam.position.set(0,0.4,5.5);
@@ -173,7 +319,6 @@ ren.setPixelRatio(Math.min(devicePixelRatio,2));
 ren.toneMapping=THREE.ACESFilmicToneMapping; ren.toneMappingExposure=0.9;
 document.getElementById("orb").appendChild(ren.domElement);
 
-// post-processing — all local (vendored addons, no CDN)
 const {EffectComposer} = await import("./vendor/js/postprocessing/EffectComposer.js");
 const {RenderPass}     = await import("./vendor/js/postprocessing/RenderPass.js");
 const {UnrealBloomPass}= await import("./vendor/js/postprocessing/UnrealBloomPass.js");
@@ -227,14 +372,13 @@ const neb=new THREE.Points(ng,new THREE.PointsMaterial({size:0.055,vertexColors:
 const sr=new THREE.Mesh(new THREE.RingGeometry(R1-0.01,R1+0.01,120),new THREE.MeshBasicMaterial({color:C.hot,transparent:true,opacity:0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false})); sr.rotation.x=Math.PI/2; grp.add(sr);
 
 let micLevel=0,target=0,state="idle"; const clock=new THREE.Clock();
-// gesture-FX state — declared BEFORE animate() uses it (TDZ bug fix)
 let fxPulse=0,fxColor=null,fxTimer=null;
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
   shell.rotation.y+=0.0015;shell.rotation.x=Math.sin(t*0.08)*0.05;
   core.rotation.y-=0.005;core.rotation.z+=0.002;
   micLevel=THREE.MathUtils.lerp(micLevel,target,0.25);
-  if(fxPulse>0.001){ fxPulse*=0.94; }          // decay gesture punch
-  const lvl=Math.max(micLevel, fxPulse*1.3);   // gesture drives the orb too
+  if(fxPulse>0.001){ fxPulse*=0.94; }
+  const lvl=Math.max(micLevel, fxPulse*1.3);
   cu.uTime.value=t; cu.uLevel.value=lvl+(state==='think'?0.25*(0.5+0.5*Math.sin(t*6)):0);
   const breathe=1+Math.sin(t*0.8)*0.04+lvl*0.5;
   coreMesh.scale.setScalar(breathe); glow.scale.setScalar(breathe*(1+lvl*0.6));
@@ -249,7 +393,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
   chrom.uniforms.uTime.value=t; composer.render();}
 animate();
 
-/* ============================== MIC (audio-reactive orb) ============================== */
+/* ============================== MIC ============================== */
 async function startMic(){
   if(!S.mic) return;
   try{
@@ -262,19 +406,18 @@ async function startMic(){
     (function tick(){ an.getByteFrequencyData(buf);
       let sum=0; for(let i=0;i<buf.length;i++) sum+=buf[i];
       target = Math.min(1.6, (sum/buf.length)/90); requestAnimationFrame(tick); })();
-  }catch(e){ /* mic denied — orb still runs, just not reactive */ }
+  }catch(e){ console.log("mic denied"); }
 }
 startMic();
 
-/* ============================== GESTURES (all 6, offline) ============================== */
+/* ============================== GESTURES ============================== */
 const video=document.getElementById("cam"),ovl=document.getElementById("ovl"),octx=ovl.getContext("2d");
 const gstEl=document.getElementById("gst");
 let lm=null,gOn=false;
 async function startG(){
-  const fs = await FilesetResolver.forVisionTasks("./vendor/wasm");   // LOCAL wasm
-  lm = await HandLandmarker.createFromOptions(fs,{
-    baseOptions:{modelAssetPath:"./vendor/models/hand_landmarker.task",delegate:"GPU"},
-    runningMode:"VIDEO",numHands:2});
+  const fs = await FilesetResolver.forVisionTasks("./vendor/wasm");
+  lm = await HandLandmarker.createFromOptions(fs,
+    {baseOptions:{modelAssetPath:"./vendor/models/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2});
   const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});
   video.srcObject=s; await video.play(); video.style.display="block"; ovl.style.display="block";
   gOn=true; loop();
@@ -285,9 +428,7 @@ function loop(){ if(!gOn) return; requestAnimationFrame(loop);
   const r=lm.detectForVideo(video,performance.now()); classify(r.landmarks);
 }
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-/* gesture state machine */
 let gPrev=null,gHold=null,gHoldT=0;
-/* local visual feedback: every fired gesture punches the orb */
 const fxEl=document.getElementById("fx");
 const FX={ "pinch":{txt:"▲ TALK",color:0xffcc66}, "zoom":{txt:"⤢ ZOOM",color:0xffaa30},
   "palm":{txt:"◉ LISTEN",color:0x66ccff}, "peace":{txt:"❒ SHOT",color:0xff8888},
@@ -303,7 +444,6 @@ function gestureFx(g){
 function classify(ls){
   octx.clearRect(0,0,ovl.width,ovl.height);
   const hands=ls||[];
-  // draw skeleton per hand
   hands.forEach(L=>{
     octx.strokeStyle="#ffcc66"; octx.lineWidth=1.5;
     const P=i=>[(1-L[i].x)*ovl.width,L[i].y*ovl.height];
@@ -311,11 +451,10 @@ function classify(ls){
                   [9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
     bones.forEach(([a,b])=>{const A=P(a),B=P(b);octx.beginPath();octx.moveTo(...A);octx.lineTo(...B);octx.stroke();});
   });
-  // --- compute per-hand features ---
   const feats=hands.map(L=>{
-    const pinch = dist(L[4],L[8]) / Math.max(1e-6, dist(L[0],L[9]));      // thumb-index
-    const tip=(i)=>dist(L[i],L[0]) / Math.max(1e-6, dist(L[5],L[0]));    // tip reach vs palm
-    const up = [8,12,16,20].filter(i=>tip(i) > 1.35).length;             // extended fingers
+    const pinch = dist(L[4],L[8]) / Math.max(1e-6, dist(L[0],L[9]));
+    const tip=(i)=>dist(L[i],L[0]) / Math.max(1e-6, dist(L[5],L[0]));
+    const up = [8,12,16,20].filter(i=>tip(i) > 1.35).length;
     const thumbUp = tip(4) > 1.25 && Math.abs(L[4].y-L[3].y) < Math.abs(L[8].y-L[6].y)*0.7;
     return {pinch, up, thumbUp, L};
   });
@@ -332,7 +471,6 @@ function classify(ls){
     if (f.thumbUp && f.up === 0) g = "thumbs-up";
     if (f.up === 1 && f.L[8].y < f.L[6].y) g = "point";
   }
-  // swipe: track palm x over time
   if (g === "palm" && hands.length === 1){
     const cx = feats[0].L[9].x;
     if (gPrev && gPrev.g === "palm"){
@@ -347,10 +485,9 @@ function classify(ls){
     "thumbs-up":"THUMBS UP","swipe-left":"SWIPE ‹","swipe-right":"SWIPE ›",point:"POINT",fist:"—"};
   gstEl.textContent = "GESTURE: " + (g && names[g] ? names[g] : "—");
 
-  // fire only on TRANSITIONS (rising edge)
   if (g && g !== window._lastG){
-    fire(g);        // -> agent over WS
-    gestureFx(g);   // -> local orb burst (works even with no link)
+    fire(g);
+    gestureFx(g);
   }
   window._lastG = g;
 }
@@ -362,7 +499,7 @@ function fire(g){
   const m = map[g]; if(m) send(m);
 }
 
-/* ============================== LINK (agent WS, robust) ============================== */
+/* ============================== LINK ============================== */
 let ws=null, backoff=1000;
 const lnk=document.getElementById("lnk");
 function setLink(ok,txt){ lnk.textContent = "LINK: "+txt; lnk.className = "hud link "+(ok?"ok":"bad"); }
@@ -390,7 +527,6 @@ function send(m){ if(ws && ws.readyState===1) ws.send(JSON.stringify(m)); }
 
 /* buttons */
 document.getElementById("t").onclick=()=>{ send({type:"talk"}); state="listen"; };
-/* typed command box — full agent control without voice */
 const cmdIn=document.getElementById("cmdIn"), cmdGo=document.getElementById("cmdGo");
 function runCmd(){
   const text=(cmdIn.value||"").trim(); if(!text) return;
@@ -416,7 +552,7 @@ document.getElementById("g").onclick=async function(){
     catch(e){ gstEl.textContent="CAMERA DENIED"; this.classList.remove("on"); } }
 };
 
-/* keep screen on while the orb is visible */
+/* keep screen on */
 try{ if(navigator.wakeLock){ navigator.wakeLock.request("screen").catch(()=>{}); } }catch(e){}
 
 addEventListener("resize",()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
