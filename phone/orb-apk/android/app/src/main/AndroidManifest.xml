@@ -1,28 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="ULTRON Orb"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:name=".MainActivity"
-            android:label="@string/title_activity_main"
+            android:label="ULTRON Orb"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:exported="true">
-
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
+
+        <!-- Foreground Service for always-on wake word -->
+        <service
+            android:name=".service.VoiceWakeService"
+            android:exported="false"
+            android:foregroundServiceType="microphone">
+        </service>
+
+        <!-- Notification Listener for reading messages aloud -->
+        <service
+            android:name=".service.MessageReaderService"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -31,19 +66,8 @@
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths"></meta-data>
+                android:resource="@xml/file_paths" />
         </provider>
-    </application>
 
-    <!-- Permissions -->
-    <!-- CAMERA: MediaPipe hand gestures via front camera (getUserMedia) -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <!-- RECORD_AUDIO + MODIFY_AUDIO_SETTINGS: mic capture for voice input / audio-reactive orb -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Hardware features (notRequired so it installs on devices without front cam) -->
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
-    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    </application>
 </manifest>

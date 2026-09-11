@@ -116,12 +116,24 @@ button.sm{padding:8px 10px;font-size:10px;}
     <div class="storage-info" id="storage-info"></div>
     
     <h3>CLOUD PROVIDERS</h3>
-    <label>OpenRouter API Key</label>
-    <input id="cfg-openrouter" placeholder="sk-or-..." type="password" />
-    <label>Anthropic API Key</label>
-    <input id="cfg-anthropic" placeholder="sk-ant-..." type="password" />
-    <label>OpenAI API Key</label>
-    <input id="cfg-openai" placeholder="sk-..." type="password" />
+        <label>OpenRouter API Key</label>
+        <input id="cfg-openrouter" placeholder="sk-or-..." type="password" />
+        <label>Anthropic API Key</label>
+        <input id="cfg-anthropic" placeholder="sk-ant-..." type="password" />
+        <label>OpenAI API Key</label>
+        <input id="cfg-openai" placeholder="sk-..." type="password" />
+    
+        <h3>VOICE SETTINGS</h3>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="cfg-wake" checked /> Always-on wake word
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="cfg-tts" checked /> Speak responses
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="cfg-msg" /> Read notifications
+        </label>
+        <label style="font-size:9px;opacity:.6;margin-top:4px;">Banking/OTP notifications are always blocked by default.</label>
     
     <div class="row">
       <button id="cfg-cancel">CANCEL</button>
@@ -159,6 +171,9 @@ const S = {
   openrouter: localStorage.getItem("ultron.openrouter") || "",
   anthropic: localStorage.getItem("ultron.anthropic") || "",
   openai: localStorage.getItem("ultron.openai") || "",
+  wakeEnabled: localStorage.getItem("ultron.wake") !== "off",
+  ttsEnabled: localStorage.getItem("ultron.tts") !== "off",
+  msgReader: localStorage.getItem("ultron.msg_reader") === "on",
 };
 const boot = document.getElementById("boot");
 setTimeout(()=>boot.remove(), 1400);
@@ -323,8 +338,11 @@ document.getElementById("btn-settings").onclick = () => {
   settingsModal.style.display = "block";
   document.getElementById("cfg-url").value = S.url;
   document.getElementById("cfg-openrouter").value = S.openrouter;
-  document.getElementById("cfg-anthropic").value = S.anthropic;
-  document.getElementById("cfg-openai").value = S.openai;
+    document.getElementById("cfg-anthropic").value = S.anthropic;
+    document.getElementById("cfg-openai").value = S.openai;
+    document.getElementById("cfg-wake").checked = S.wakeEnabled;
+    document.getElementById("cfg-tts").checked = S.ttsEnabled;
+    document.getElementById("cfg-msg").checked = S.msgReader;
   ModelManager.init();
   renderModelList();
 };
@@ -334,10 +352,16 @@ document.getElementById("cfg-save").onclick = () => {
   S.openrouter = document.getElementById("cfg-openrouter").value.trim();
   S.anthropic = document.getElementById("cfg-anthropic").value.trim();
   S.openai = document.getElementById("cfg-openai").value.trim();
+  S.wakeEnabled = document.getElementById("cfg-wake").checked;
+  S.ttsEnabled = document.getElementById("cfg-tts").checked;
+  S.msgReader = document.getElementById("cfg-msg").checked;
   localStorage.setItem("ultron.agent", S.url);
   localStorage.setItem("ultron.openrouter", S.openrouter);
   localStorage.setItem("ultron.anthropic", S.anthropic);
   localStorage.setItem("ultron.openai", S.openai);
+  localStorage.setItem("ultron.wake", S.wakeEnabled ? "on" : "off");
+  localStorage.setItem("ultron.tts", S.ttsEnabled ? "on" : "off");
+  localStorage.setItem("ultron.msg_reader", S.msgReader ? "on" : "off");
   settingsModal.style.display = "none";
   location.reload();
 };
