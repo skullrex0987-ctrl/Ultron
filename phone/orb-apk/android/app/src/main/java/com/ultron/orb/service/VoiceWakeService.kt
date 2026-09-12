@@ -12,6 +12,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -134,7 +135,7 @@ class VoiceWakeService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("ULTRON is listening")
             .setContentText("Say 'ultron' to activate")
-            .setSmallIcon(android.R.drawable.ic_menu_mic)
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -324,7 +325,7 @@ class VoiceWakeService : Service() {
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("ULTRON")
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_menu_mic)
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()

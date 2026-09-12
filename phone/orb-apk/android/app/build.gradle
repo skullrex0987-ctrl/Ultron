@@ -1,9 +1,13 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace "com.ultron.orb"
     compileSdk rootProject.ext.compileSdkVersion
     ndkVersion "27.0.11718014"
+    kotlinOptions {
+        jvmTarget = '17'
+    }
     defaultConfig {
         applicationId "com.ultron.orb"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -61,6 +65,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 }
 
 apply from: 'capacitor.build.gradle'

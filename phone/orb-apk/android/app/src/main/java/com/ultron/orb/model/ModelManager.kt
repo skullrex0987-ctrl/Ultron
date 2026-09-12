@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Environment
 import android.util.Log
+import com.ultron.orb.inference.InferenceManager
 import kotlinx.coroutines.*
 import java.io.*
 import java.net.HttpURLConnection

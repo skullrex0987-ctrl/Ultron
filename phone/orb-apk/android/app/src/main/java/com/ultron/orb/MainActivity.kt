@@ -26,17 +26,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var modelManager: ModelManager
     private lateinit var modelBridge: ModelBridge
     
-    private static final int PERMISSION_REQUEST_CODE = 1001
-    
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 1001
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Initialize managers
+
+        // Setup WebView before exposing the bridge
+        setupWebView()
         modelManager = ModelManager(this)
         modelBridge = ModelBridge(webView, modelManager)
-        
-        // Setup WebView
-        setupWebView()
+        webView.addJavascriptInterface(modelBridge, "AndroidModelBridge")
         
         // Request permissions
         requestRequiredPermissions()
