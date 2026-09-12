@@ -82,18 +82,26 @@ def subscribe(cb) -> None:
 
 
 def verify_entry(entry: dict) -> bool:
-    """Verify the HMAC emitted by log() for one parsed JSONL entry."""
-    expected = entry.get("_hmac")
-    if not isinstance(expected, str):
+    """Verify an HMAC entry, while accepting legacy SHA-256 entries."""
+    expected_hmac = entry.get("_hmac")
+    unsigned_hmac = {k: v for k, v in entry.items() if k != "_hmac"}
+    if isinstance(expected_hmac, str):
+        actual = hmac.new(
+            _get_audit_key(),
+            json.dumps(unsigned_hmac, default=str, sort_keys=True).encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return hmac.compare_digest(expected_hmac, actual)
+
+    # Backward compatibility for existing audit entries created before HMAC.
+    expected_sha = entry.get("_sha256")
+    if not isinstance(expected_sha, str):
         return False
-    unsigned = {k: v for k, v in entry.items() if k != "_hmac"}
-    key = _get_audit_key()
-    actual = hmac.new(
-        key,
-        json.dumps(unsigned, default=str, sort_keys=True).encode(),
-        hashlib.sha256
+    unsigned_sha = {k: v for k, v in entry.items() if k != "_sha256"}
+    actual_sha = hashlib.sha256(
+        json.dumps(unsigned_sha, default=str, sort_keys=True).encode()
     ).hexdigest()
-    return hmac.compare_digest(expected, actual)
+    return hmac.compare_digest(expected_sha, actual_sha)
 
 
 def transcript(text: str, who: str = "ultron") -> None:

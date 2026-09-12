@@ -63,9 +63,7 @@ class TestObservationResult(unittest.TestCase):
 
 
 class TestGoogleObservation(unittest.TestCase):
-    @mock.patch("proactive_engine._HAVE_GOOGLE", True)
-    @mock.patch("proactive_engine.build")
-    async def test_calendar_observation(self, mock_build):
+    def test_calendar_observation(self):
         from proactive_engine import ProactiveEngine, UserMemory, GoogleWorkspace
 
         # Setup mock Google Workspace
@@ -73,7 +71,7 @@ class TestGoogleObservation(unittest.TestCase):
         mock_ws.calendar.list_events.return_value = [
             {
                 "summary": "Team Meeting",
-                "start": {"dateTime": "2024-01-15T10:00:00+00:00"},
+                "start": {"dateTime": "2099-01-15T10:00:00"},
                 "duration": {"dateMinutes": 60},
                 "location": "Conference Room",
                 "attendees": [{"email": "user@example.com"}]
@@ -85,37 +83,20 @@ class TestGoogleObservation(unittest.TestCase):
         mock_auth.get_credentials.return_value = mock.MagicMock()
         mock_ws.auth = mock_auth
 
-        # Mock the GoogleWorkspace constructor
-        with mock.patch.object(GoogleWorkspace, "__init__", return_value=None):
-            engine = ProactiveEngine(
-                UserMemory(os.path.join(os.path.dirname(__file__), "..", "tmp_memory.db")),
-                google_ws=GoogleWorkspace.__new__(GoogleWorkspace)
-            )
-            # Manually set up
-            engine.google_ws = GoogleWorkspace.__new__(GoogleWorkspace)
-            engine.google_ws.calendar = mock.MagicMock()
-            engine.google_ws.calendar.list_events = mock.MagicMock(
-                return_value=[
-                    {
-                        "summary": "Team Meeting",
-                        "start": {"dateTime": "2024-01-15T10:00:00+00:00"},
-                        "duration": {"dateMinutes": 60},
-                    }
-                ]
-            )
-
-            # Test observation
-            import asyncio
-            loop = asyncio.new_event_loop()
-            try:
-                result = loop.run_until_complete(
-                    engine._observe("calendar")
-                )
-                self.assertEqual(result.type, "calendar")
-                self.assertTrue(result.actionable)
-                self.assertIsNotNone(result.suggested_action)
-            finally:
-                loop.close()
+        import tempfile
+        memory_path = os.path.join(tempfile.gettempdir(), "ultron_proactive_calendar_test.db")
+        memory = UserMemory(memory_path)
+        engine = ProactiveEngine(memory, google_ws=mock.MagicMock(), desktop=mock.MagicMock())
+        engine.google_ws = mock_ws
+        import asyncio
+        result = asyncio.run(engine._observe("calendar"))
+        self.assertEqual(result.type, "calendar")
+        self.assertTrue(result.actionable)
+        self.assertIsNotNone(result.suggested_action)
+        try:
+            os.remove(memory_path)
+        except OSError:
+            pass
 
 
 class TestSuggestions(unittest.TestCase):
@@ -128,22 +109,23 @@ class TestSuggestions(unittest.TestCase):
         type(mock_datetime).now = mock.PropertyMock(return_value=mock_now)
 
         engine = ProactiveEngine.__new__(ProactiveEngine)
-        # Skip the init that needs real dependencies
         engine.current_context = {}
+        engine.google_ws = mock.MagicMock()
+        engine._is_soon_to_meet = lambda now: False
 
         import asyncio
         loop = asyncio.new_event_loop()
         try:
             # Mock the google workspace
-            with mock.patch.object(engine, 'google_ws') as mock_ws:
-                mock_ws.calendar.list_events.return_value = []
-                mock_ws.gmail.list_messages.return_value = []
+            mock_ws = engine.google_ws
+            mock_ws.calendar.list_events.return_value = []
+            mock_ws.gmail.list_messages.return_value = []
 
-                result = loop.run_until_complete(
-                    engine._generate_suggestion(mock_now)
-                )
-                self.assertEqual(result.type, "suggestion")
-                self.assertTrue(result.actionable)
+            result = loop.run_until_complete(
+                engine._generate_suggestion(mock_now)
+            )
+            self.assertEqual(result.type, "suggestion")
+            self.assertTrue(result.actionable)
         finally:
             loop.close()
 

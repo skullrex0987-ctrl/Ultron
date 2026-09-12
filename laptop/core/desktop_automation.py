@@ -77,7 +77,8 @@ class WindowManager:
         def enum_callback(hwnd, _):
             if filter_visible and not win32gui.IsWindowVisible(hwnd):
                 return True
-            if not win32gui.GetWindowText(hwnd):
+            title = win32gui.GetWindowText(hwnd)
+            if not title:
                 return True
 
             try:
@@ -96,7 +97,7 @@ class WindowManager:
 
                 windows.append(WindowInfo(
                     handle=hwnd,
-                    title=win32gui.GetWindowText(hwnd),
+                    title=title,
                     class_name=win32gui.GetClassName(hwnd),
                     process_id=pid,
                     process_name=process_name,
@@ -121,14 +122,13 @@ class WindowManager:
                                     capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
                 for line in result.stdout.strip().split("\n"):
-                    parts = line.split(None, 6)
-                    if len(parts) >= 7:
-                        handle = int(parts[0], 16)
-                        desktop = parts[1]
-                        pid = int(parts[2])
-                        x, y, w, h = map(int, parts[3:7])
-                        title = parts[7] if len(parts) > 7 else ""
-                        windows.append(WindowInfo(
+                        parts = line.split(None, 7)
+                        if len(parts) >= 8:
+                            handle = int(parts[0], 16)
+                            pid = int(parts[2])
+                            x, y, w, h = map(int, parts[3:7])
+                            title = parts[7]
+                            windows.append(WindowInfo(
                             handle=handle,
                             title=title,
                             class_name="",
@@ -359,7 +359,11 @@ class BrowserAutomation:
             if not ws_url:
                 return False
 
-            self._ws = await websockets.connect(ws_url)
+            connection = websockets.connect(ws_url)
+            if hasattr(connection, "__await__"):
+                self._ws = await connection
+            else:
+                self._ws = connection
             return True
         except Exception:
             return False

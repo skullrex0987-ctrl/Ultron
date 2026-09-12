@@ -51,7 +51,7 @@ class ProactiveEngine:
         self.memory = memory
         self.google_ws = google_ws or GoogleWorkspace()
         self.desktop = desktop or DesktopAutomation()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._running = False
         self._thread = None
 
@@ -114,40 +114,35 @@ class ProactiveEngine:
             pass
 
     def _run_loop(self):
-        """Main observation loop running in background thread."""
-        calendar_interval = self._schedule_observer("calendar", CALENDAR_CHECK_INTERVAL)
-        email_interval = self._schedule_observer("email", EMAIL_CHECK_INTERVAL)
-        system_interval = self._schedule_observer("system", SYSTEM_HEALTH_INTERVAL)
-        suggestion_interval = self._schedule_observer("suggestion", PROACTIVE_SUGGESTION_INTERVAL)
+        """Main observation loop in a dedicated thread.
 
+        Each cycle owns a short-lived asyncio loop, so the background thread
+        never calls asyncio.create_task without a running loop.
+        """
+        last_run = {"calendar": 0.0, "email": 0.0, "system": 0.0, "suggestion": 0.0}
+        intervals = {
+            "calendar": CALENDAR_CHECK_INTERVAL,
+            "email": EMAIL_CHECK_INTERVAL,
+            "system": SYSTEM_HEALTH_INTERVAL,
+            "suggestion": PROACTIVE_SUGGESTION_INTERVAL,
+        }
         try:
             while self._running:
+                now = time.monotonic()
+                for obs_type, interval in intervals.items():
+                    if now - last_run[obs_type] >= interval:
+                        try:
+                            result = asyncio.run(self._observe(obs_type))
+                            self._handle_observation_result(result)
+                        except Exception as e:
+                            self._log("proactive", {"event": "observer-error", "type": obs_type, "err": str(e)})
+                        last_run[obs_type] = now
                 time.sleep(1)
         except Exception as e:
             self._log("proactive", {"event": "loop-error", "err": str(e)})
-        finally:
-            # Intervals are just numbers; actual tasks are asyncio tasks
-            pass
 
     def _schedule_observer(self, obs_type: str, interval: int):
-        """Schedule an observation task."""
-
-        import asyncio
-
-        async def observer():
-            while self._running:
-                try:
-                    await asyncio.sleep(interval)
-                    if not self._running:
-                        break
-                    result = await self._observe(obs_type)
-                    self._handle_observation_result(result)
-                except asyncio.CancelledError:
-                    break
-                except Exception as e:
-                    self._log("proactive", {"event": "observer-error", "type": obs_type, "err": str(e)})
-
-        asyncio.create_task(observer())
+        """Compatibility helper; scheduling is handled by _run_loop."""
         return interval
 
     async def _observe(self, obs_type: str) -> ObservationResult:

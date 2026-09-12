@@ -181,7 +181,7 @@ _TAG_RE = _re.compile(r"</?(?:think|thinking|scratchpad|system|tool_call|reasoni
                       _re.IGNORECASE)
 _BRACKET_RE = _re.compile(r"^\s*\[(?:system|assistant|user|internal|thinking)\]\s*:?\s*",
                           _re.IGNORECASE)
-_BULLET_RE = _re.compile(r"^(\s*)([*\\u2022\\u2013\\u2014+])\s+")
+_BULLET_RE = _re.compile(r"^(\s*)([*\u2022\u2013\u2014+])\s+")
 _BLANKS_RE = _re.compile(r"\n{3,}")
 
 
